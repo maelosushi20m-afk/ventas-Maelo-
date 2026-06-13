@@ -1,4 +1,6 @@
 import "./globals.css";
+
+export const dynamic = "force-dynamic";
 import { ReactNode } from "react";
 import { Providers } from "@/components/layout/Providers";
 
@@ -6,7 +8,6 @@ export const metadata = {
   title: "Maelo Rolls",
   description: "Sistema de gestión Maelo Rolls",
   manifest: "/manifest.json",
-  themeColor: "#8B0000",
   appleWebApp: { capable: true, title: "Maelo Rolls", statusBarStyle: "black-translucent" as const }
 };
 
