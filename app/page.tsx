@@ -5,5 +5,9 @@ import { useRouter } from "next/navigation";
 export default function Home() {
   const router = useRouter();
   useEffect(() => { router.replace("/pos"); }, [router]);
-  return null;
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="text-brand-gold text-lg animate-pulse">Cargando…</div>
+    </div>
+  );
 }

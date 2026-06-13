@@ -33,7 +33,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    return onAuthStateChanged(auth, async (u) => {
+    // Timeout de seguridad: si Firebase no responde en 8s (env vars faltantes, red),
+    // forzamos loading=false para no quedar en pantalla negra infinita.
+    const timeout = setTimeout(() => setLoading(false), 8000);
+
+    const unsub = onAuthStateChanged(auth, async (u) => {
+      clearTimeout(timeout);
       setUser(u);
       if (u) {
         const snap = await getDoc(doc(db, "users", u.uid));
@@ -43,6 +48,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       setLoading(false);
     });
+
+    return () => { clearTimeout(timeout); unsub(); };
   }, []);
 
   const login = async (email: string, password: string) => {

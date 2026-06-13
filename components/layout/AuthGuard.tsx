@@ -18,8 +18,13 @@ export function AuthGuard({
     if (!user) router.replace("/login");
   }, [user, loading, router]);
 
-  if (loading || !user) {
-    return <div className="p-8 text-gray-400">Cargando…</div>;
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-brand-gold text-lg animate-pulse">Cargando…</div>
+      </div>
+    );
   }
+  if (!user) return null;
   return <>{children}</>;
 }
