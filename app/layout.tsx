@@ -1,6 +1,4 @@
 import "./globals.css";
-
-export const dynamic = "force-dynamic";
 import { ReactNode } from "react";
 import { Providers } from "@/components/layout/Providers";
 
