@@ -33,10 +33,11 @@ export default function ClientesPage() {
 
   return (
     <AppShell title="Clientes" roles={["admin", "vendedor"]}>
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
         <div className="card lg:col-span-2">
           <input className="input mb-3" placeholder="Buscar cliente o teléfono…" value={term} onChange={(e) => setTerm(e.target.value)} />
-          <table className="table">
+          <div className="overflow-x-auto">
+          <table className="table min-w-[450px]">
             <thead>
               <tr><th>Nombre</th><th>Teléfono</th><th>Pedidos</th><th>Total</th><th>Último</th></tr>
             </thead>
@@ -52,6 +53,7 @@ export default function ClientesPage() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
 
         <div className="card">

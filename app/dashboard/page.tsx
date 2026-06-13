@@ -17,8 +17,8 @@ import { SalesChart } from "@/components/dashboard/SalesChart";
 function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div className="card">
-      <div className="text-xs text-gray-400 uppercase">{label}</div>
-      <div className="text-2xl font-bold mt-1 text-brand-gold">{value}</div>
+      <div className="text-xs text-gray-400 uppercase truncate">{label}</div>
+      <div className="text-lg sm:text-2xl font-bold mt-1 text-brand-gold truncate">{value}</div>
     </div>
   );
 }
@@ -67,15 +67,15 @@ export default function DashboardPage() {
           <Home size={16} /> Volver al Inicio
         </Link>
       </div>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
         <Stat label="Ventas hoy" value={formatCLP(sum(day.data))} />
         <Stat label="Ventas semana" value={formatCLP(sum(week.data))} />
         <Stat label="Ventas mes" value={formatCLP(sum(month.data))} />
         <Stat label="Pedidos hoy" value={String(count(day.data))} />
-        <Stat label="Ticket promedio (mes)" value={formatCLP(ticket(month.data))} />
+        <Stat label="Ticket prom." value={formatCLP(ticket(month.data))} />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mt-4 sm:mt-6">
         <div className="card">
           <h3 className="font-semibold mb-3 text-brand-gold">Top productos (mes)</h3>
           {topProd.length === 0 && <div className="text-sm text-gray-400">Sin datos</div>}
@@ -114,27 +114,29 @@ export default function DashboardPage() {
         <SalesChart orders={week.data || []} />
       </div>
 
-      <div className="card mt-6">
+      <div className="card mt-4 sm:mt-6">
         <h3 className="font-semibold mb-3 text-brand-gold">Últimos pedidos</h3>
-        <table className="table">
-          <thead>
-            <tr>
-              <th>#</th><th>Cliente</th><th>Total</th><th>Pago</th><th>Estado</th><th>Hora</th>
-            </tr>
-          </thead>
-          <tbody>
-            {(latest.data || []).map((o: any) => (
-              <tr key={o.id}>
-                <td>{o.numeroPedido}</td>
-                <td>{o.clienteNombre}</td>
-                <td>{formatCLP(o.total)}</td>
-                <td>{o.metodoPago}</td>
-                <td><span className="badge bg-brand-gray">{o.estado}</span></td>
-                <td>{toDate(o.fecha).toLocaleTimeString("es-CL")}</td>
+        <div className="overflow-x-auto">
+          <table className="table min-w-[500px]">
+            <thead>
+              <tr>
+                <th>#</th><th>Cliente</th><th>Total</th><th>Pago</th><th>Estado</th><th>Hora</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {(latest.data || []).map((o: any) => (
+                <tr key={o.id}>
+                  <td>{o.numeroPedido}</td>
+                  <td className="truncate max-w-[120px]">{o.clienteNombre}</td>
+                  <td>{formatCLP(o.total)}</td>
+                  <td>{o.metodoPago}</td>
+                  <td><span className="badge bg-brand-gray">{o.estado}</span></td>
+                  <td className="whitespace-nowrap">{toDate(o.fecha).toLocaleTimeString("es-CL")}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </AppShell>
   );

@@ -69,7 +69,7 @@ export default function ProductosPage() {
 
   return (
     <AppShell title="Productos" roles={["admin"]}>
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
         <div className="card lg:col-span-1">
           <h3 className="font-semibold text-brand-gold mb-3">
             {editing ? "Editar producto" : "Nuevo producto"}
@@ -123,7 +123,8 @@ export default function ProductosPage() {
 
         <div className="card lg:col-span-2">
           <h3 className="font-semibold text-brand-gold mb-3">Listado</h3>
-          <table className="table">
+          <div className="overflow-x-auto">
+          <table className="table min-w-[500px]">
             <thead>
               <tr><th>Nombre</th><th>Categoría</th><th>Normal</th><th>Oferta</th><th>Estado</th><th></th></tr>
             </thead>
@@ -147,6 +148,7 @@ export default function ProductosPage() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       </div>
     </AppShell>

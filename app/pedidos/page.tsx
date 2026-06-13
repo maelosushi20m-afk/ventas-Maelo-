@@ -48,9 +48,9 @@ export default function PedidosPage() {
 
   return (
     <AppShell title="Pedidos">
-      <div className="card mb-4 grid grid-cols-1 md:grid-cols-4 gap-2">
-        <div className="flex gap-2 items-center md:col-span-2">
-          <Search size={18} className="text-gray-400" />
+      <div className="card mb-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+        <div className="flex gap-2 items-center sm:col-span-2 lg:col-span-2">
+          <Search size={18} className="text-gray-400 shrink-0" />
           <input className="input" placeholder="Buscar #, cliente o teléfono…" value={term} onChange={(e) => setTerm(e.target.value)} />
         </div>
         <select className="input" value={filterEstado} onChange={(e) => setFilterEstado(e.target.value as any)}>
@@ -63,35 +63,60 @@ export default function PedidosPage() {
         </select>
       </div>
 
-      <div className="card">
-        <table className="table">
-          <thead>
-            <tr><th>#</th><th>Cliente</th><th>Teléfono</th><th>Total</th><th>Pago</th><th>Estado</th><th>Fecha</th><th></th></tr>
-          </thead>
-          <tbody>
-            {orders.map((o: any) => (
-              <tr key={o.id} className="hover:bg-brand-gray cursor-pointer" onClick={() => setSelected(o)}>
-                <td className="font-mono">#{o.numeroPedido}</td>
-                <td>{o.clienteNombre}</td>
-                <td>{o.telefono}</td>
-                <td>{formatCLP(o.total)}</td>
-                <td>{o.metodoPago}</td>
-                <td><span className={`badge ${colorEstado[o.estado as OrderStatus]}`}>{o.estado}</span></td>
-                <td>{toDate(o.fecha).toLocaleString("es-CL")}</td>
-                <td onClick={(e) => e.stopPropagation()}>
-                  <select className="input text-xs py-1" value={o.estado} onChange={(e) => cambiar(o.id, e.target.value as OrderStatus)}>
-                    {ORDER_STATUSES.map((s) => <option key={s}>{s}</option>)}
-                  </select>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      {/* Vista cards en móvil, tabla en desktop */}
+      <div className="card hidden md:block">
+        <div className="overflow-x-auto">
+          <table className="table min-w-[700px]">
+            <thead>
+              <tr><th>#</th><th>Cliente</th><th>Teléfono</th><th>Total</th><th>Pago</th><th>Estado</th><th>Fecha</th><th></th></tr>
+            </thead>
+            <tbody>
+              {orders.map((o: any) => (
+                <tr key={o.id} className="hover:bg-brand-gray cursor-pointer" onClick={() => setSelected(o)}>
+                  <td className="font-mono">#{o.numeroPedido}</td>
+                  <td className="truncate max-w-[120px]">{o.clienteNombre}</td>
+                  <td>{o.telefono}</td>
+                  <td>{formatCLP(o.total)}</td>
+                  <td>{o.metodoPago}</td>
+                  <td><span className={`badge ${colorEstado[o.estado as OrderStatus]}`}>{o.estado}</span></td>
+                  <td className="whitespace-nowrap">{toDate(o.fecha).toLocaleString("es-CL")}</td>
+                  <td onClick={(e) => e.stopPropagation()}>
+                    <select className="input text-xs py-1" value={o.estado} onChange={(e) => cambiar(o.id, e.target.value as OrderStatus)}>
+                      {ORDER_STATUSES.map((s) => <option key={s}>{s}</option>)}
+                    </select>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Vista cards para móvil */}
+      <div className="md:hidden space-y-2">
+        {orders.map((o: any) => (
+          <div key={o.id} className="card cursor-pointer active:bg-brand-gray" onClick={() => setSelected(o)}>
+            <div className="flex justify-between items-start mb-1">
+              <span className="font-mono font-bold">#{o.numeroPedido}</span>
+              <span className={`badge ${colorEstado[o.estado as OrderStatus]}`}>{o.estado}</span>
+            </div>
+            <div className="text-sm">{o.clienteNombre}</div>
+            <div className="flex justify-between items-center mt-2 text-sm">
+              <span className="text-brand-gold font-bold">{formatCLP(o.total)}</span>
+              <span className="text-gray-400 text-xs">{o.metodoPago} · {toDate(o.fecha).toLocaleString("es-CL")}</span>
+            </div>
+            <div className="mt-2" onClick={(e) => e.stopPropagation()}>
+              <select className="input text-xs py-1" value={o.estado} onChange={(e) => cambiar(o.id, e.target.value as OrderStatus)}>
+                {ORDER_STATUSES.map((s) => <option key={s}>{s}</option>)}
+              </select>
+            </div>
+          </div>
+        ))}
       </div>
 
       {selected && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50" onClick={() => setSelected(null)}>
-          <div className="card max-w-lg w-full" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/70 flex items-end sm:items-center justify-center sm:p-4 z-50" onClick={() => setSelected(null)}>
+          <div className="card max-w-lg w-full rounded-b-none sm:rounded-b-xl max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-lg font-bold text-brand-gold mb-2">Pedido #{selected.numeroPedido}</h3>
             <div className="text-sm space-y-1 mb-3">
               <div><b>Cliente:</b> {selected.clienteNombre}</div>

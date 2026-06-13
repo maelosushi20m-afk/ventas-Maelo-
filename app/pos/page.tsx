@@ -104,19 +104,19 @@ export default function POSPage() {
 
   return (
     <AppShell title="Nuevo pedido" roles={["admin", "vendedor"]}>
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 card">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
+        <div className="lg:col-span-2 card order-1 lg:order-none">
           <div className="flex gap-2 flex-wrap mb-3">
             {["Promociones", ...PRODUCT_CATEGORIES.filter((c) => c !== "Promociones")].map((c) => (
               <button
                 key={c}
                 onClick={() => setCat(c)}
-                className={`px-3 py-1 rounded-lg text-sm ${cat === c ? "bg-brand-red text-white" : "border border-brand-gray text-gray-300"}`}
+                className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm ${cat === c ? "bg-brand-red text-white" : "border border-brand-gray text-gray-300"}`}
               >{c}</button>
             ))}
           </div>
           <input className="input mb-3" placeholder="Buscar…" value={search} onChange={(e) => setSearch(e.target.value)} />
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
             {visible.map((p: any) => {
               const tipo = cat === "Promociones" ? "promotion" : "product";
               const precio = tipo === "promotion" ? p.precio : (p.precioOferta && p.precioOferta > 0 ? p.precioOferta : p.precioNormal);
@@ -136,7 +136,7 @@ export default function POSPage() {
           </div>
         </div>
 
-        <div className="card flex flex-col">
+        <div className="card flex flex-col order-first lg:order-none">
           <h3 className="font-semibold text-brand-gold mb-3">Pedido</h3>
           <div className="space-y-3 mb-3">
             {/* Buscador de cliente */}

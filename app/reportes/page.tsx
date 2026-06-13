@@ -59,14 +59,14 @@ export default function ReportesPage() {
 
       {data && (
         <>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4">
             <Stat label="Ventas" value={formatCLP(data.totalVentas)} />
             <Stat label="Pedidos" value={String(data.cantidadPedidos)} />
-            <Stat label="Ticket promedio" value={formatCLP(data.ticketPromedio)} />
+            <Stat label="Ticket prom." value={formatCLP(data.ticketPromedio)} />
             <Stat label="Métodos" value={Object.keys(data.porMetodoPago).length.toString()} />
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <Section title="Métodos de pago" rows={Object.entries(data.porMetodoPago).map(([k, v]) => [k, formatCLP(v)])} />
             <Section title="Top productos" rows={data.topProductos.map((p) => [p.nombre, `${p.cantidad}`, formatCLP(p.total)])} />
             <Section title="Top promociones" rows={data.topPromociones.map((p) => [p.nombre, `${p.cantidad}`, formatCLP(p.total)])} />
@@ -81,8 +81,8 @@ export default function ReportesPage() {
 function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div className="card">
-      <div className="text-xs text-gray-400 uppercase">{label}</div>
-      <div className="text-2xl font-bold text-brand-gold mt-1">{value}</div>
+      <div className="text-xs text-gray-400 uppercase truncate">{label}</div>
+      <div className="text-lg sm:text-2xl font-bold text-brand-gold mt-1 truncate">{value}</div>
     </div>
   );
 }

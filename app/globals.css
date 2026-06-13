@@ -10,17 +10,20 @@ body {
   font-family: Inter, system-ui, sans-serif;
 }
 
-.card { @apply bg-brand-dark border border-brand-gray rounded-xl p-4; }
-.btn { @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 font-medium transition disabled:opacity-50; }
+.card { @apply bg-brand-dark border border-brand-gray rounded-xl p-3 sm:p-4; }
+.btn { @apply inline-flex items-center justify-center gap-2 rounded-lg px-3 sm:px-4 py-2 font-medium transition disabled:opacity-50 text-sm; }
 .btn-primary { @apply btn bg-brand-red text-white hover:bg-red-800; }
 .btn-gold { @apply btn bg-brand-gold text-brand-black hover:opacity-90; }
 .btn-ghost { @apply btn border border-brand-gray hover:bg-brand-gray; }
-.input { @apply w-full bg-brand-black border border-brand-gray rounded-lg px-3 py-2 outline-none focus:border-brand-gold; }
+.input { @apply w-full bg-brand-black border border-brand-gray rounded-lg px-3 py-2 outline-none focus:border-brand-gold text-sm sm:text-base; }
 .label { @apply text-sm text-gray-300 mb-1 block; }
 .table { @apply w-full text-sm; }
-.table th { @apply text-left text-gray-400 py-2 px-3 border-b border-brand-gray; }
-.table td { @apply py-2 px-3 border-b border-brand-gray; }
+.table th { @apply text-left text-gray-400 py-2 px-2 sm:px-3 border-b border-brand-gray text-xs sm:text-sm whitespace-nowrap; }
+.table td { @apply py-2 px-2 sm:px-3 border-b border-brand-gray text-xs sm:text-sm; }
 .badge { @apply inline-flex px-2 py-1 rounded text-xs font-semibold; }
+
+/* Wrapper para tablas responsivas */
+.table-responsive { @apply overflow-x-auto -mx-3 sm:-mx-4 px-3 sm:px-4; }
 
 @media print {
   .no-print { display: none !important; }

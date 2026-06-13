@@ -39,25 +39,25 @@ export default function CajaPage() {
 
   return (
     <AppShell title="Caja diaria" roles={["admin", "caja"]}>
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6">
         {(["Efectivo", "Transferencia", "Débito", "Crédito"] as const).map((k) => (
           <div key={k} className="card">
             <div className="text-xs text-gray-400 uppercase">{k}</div>
-            <div className="text-2xl font-bold text-brand-gold">{formatCLP(agg.totals[k])}</div>
+            <div className="text-lg sm:text-2xl font-bold text-brand-gold truncate">{formatCLP(agg.totals[k])}</div>
           </div>
         ))}
       </div>
 
-      <div className="card mb-6">
-        <div className="flex justify-between items-center">
+      <div className="card mb-4 sm:mb-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
           <div>
             <div className="text-gray-400">Total del día</div>
-            <div className="text-3xl font-bold text-brand-gold">{formatCLP(agg.total)}</div>
+            <div className="text-2xl sm:text-3xl font-bold text-brand-gold">{formatCLP(agg.total)}</div>
             <div className="text-sm text-gray-400 mt-1">{agg.count} pedidos válidos</div>
           </div>
-          <div className="flex gap-2">
-            {!open.data && <button className="btn-gold" onClick={abrir}>Abrir caja</button>}
-            {open.data && <button className="btn-primary" onClick={cerrar}>Cerrar caja</button>}
+          <div className="flex gap-2 w-full sm:w-auto">
+            {!open.data && <button className="btn-gold flex-1 sm:flex-none" onClick={abrir}>Abrir caja</button>}
+            {open.data && <button className="btn-primary flex-1 sm:flex-none" onClick={cerrar}>Cerrar caja</button>}
           </div>
         </div>
         {open.data && (
@@ -69,7 +69,8 @@ export default function CajaPage() {
 
       <div className="card">
         <h3 className="font-semibold text-brand-gold mb-3">Cierres anteriores</h3>
-        <table className="table">
+        <div className="overflow-x-auto">
+        <table className="table min-w-[550px]">
           <thead>
             <tr><th>Apertura</th><th>Cierre</th><th>Usuario</th><th>Pedidos</th><th>Total</th><th>Estado</th></tr>
           </thead>
@@ -86,6 +87,7 @@ export default function CajaPage() {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
     </AppShell>
   );

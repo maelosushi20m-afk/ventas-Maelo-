@@ -64,7 +64,7 @@ export default function PromocionesPage() {
 
   return (
     <AppShell title="Promociones" roles={["admin"]}>
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
         <div className="card">
           <h3 className="font-semibold text-brand-gold mb-3">{editing ? "Editar" : "Nueva"} promoción</h3>
           <div className="space-y-3">

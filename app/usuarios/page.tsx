@@ -32,7 +32,8 @@ export default function UsuariosPage() {
         Los usuarios se crean desde Firebase Authentication. Aquí gestionas roles y estado.
       </div>
       <div className="card">
-        <table className="table">
+        <div className="overflow-x-auto">
+        <table className="table min-w-[400px]">
           <thead>
             <tr><th>Nombre</th><th>Email</th><th>Rol</th><th>Estado</th></tr>
           </thead>
@@ -67,6 +68,7 @@ export default function UsuariosPage() {
             )}
           </tbody>
         </table>
+        </div>
       </div>
     </AppShell>
   );

@@ -203,12 +203,12 @@ export default function InventarioPage() {
       )}
 
       {/* ── tabs ── */}
-      <div className="flex gap-2 mb-4">
+      <div className="flex flex-wrap gap-2 mb-4">
         {(["inventario", "historial"] as Tab[]).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium capitalize ${
+            className={`px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium capitalize ${
               tab === t ? "bg-brand-red text-white" : "border border-brand-gray text-gray-300"
             }`}
           >
@@ -216,8 +216,8 @@ export default function InventarioPage() {
               : <span className="flex items-center gap-1"><ClipboardList size={15} /> Historial</span>}
           </button>
         ))}
-        <button onClick={openNew} className="ml-auto btn-primary text-sm">
-          <Plus size={16} /> Nuevo producto
+        <button onClick={openNew} className="ml-auto btn-primary text-xs sm:text-sm">
+          <Plus size={16} /> <span className="hidden sm:inline">Nuevo producto</span><span className="sm:hidden">Nuevo</span>
         </button>
       </div>
 
