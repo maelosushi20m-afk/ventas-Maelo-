@@ -16,13 +16,13 @@ import {
 import { db } from "@/lib/firebase/client";
 import { InventoryItem, InventoryMovement, MovementType } from "@/types";
 
-const col = collection(db, "inventory");
-const movCol = collection(db, "inventoryMovements");
+const col = () => collection(db, "inventory");
+const movCol = () => collection(db, "inventoryMovements");
 
 // ── Items ──────────────────────────────────────────────────────
 
 export async function listInventory(soloActivos = false): Promise<InventoryItem[]> {
-  const snap = await getDocs(query(col, orderBy("nombre")));
+  const snap = await getDocs(query(col(), orderBy("nombre")));
   const all = snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) })) as InventoryItem[];
   return soloActivos ? all.filter((i) => i.activo !== false) : all;
 }
@@ -35,7 +35,7 @@ export async function getInventoryItem(id: string): Promise<InventoryItem | null
 export async function createInventoryItem(
   data: Omit<InventoryItem, "id" | "createdAt" | "updatedAt">
 ): Promise<string> {
-  const ref = await addDoc(col, {
+  const ref = await addDoc(col(), {
     ...data,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp()
@@ -96,7 +96,7 @@ export async function registrarMovimiento(input: {
       createdAt: serverTimestamp()
     };
 
-    await addDoc(movCol, movData);
+    await addDoc(movCol(), movData);
     return { stockResultante };
   });
 }
@@ -104,7 +104,7 @@ export async function registrarMovimiento(input: {
 export async function listMovements(itemId?: string, limitN = 50): Promise<InventoryMovement[]> {
   const constraints: any[] = [orderBy("createdAt", "desc"), limit(limitN)];
   if (itemId) constraints.unshift(where("itemId", "==", itemId));
-  const snap = await getDocs(query(movCol, ...constraints));
+  const snap = await getDocs(query(movCol(), ...constraints));
   return snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
 }
 

@@ -15,10 +15,10 @@ import { CashSession, Order, PAYMENT_METHODS } from "@/types";
 import { listOrdersRange } from "./orderService";
 import { endOfDay, startOfDay } from "@/lib/utils";
 
-const col = collection(db, "cashSessions");
+const col = () => collection(db, "cashSessions");
 
 export async function getOpenSession(): Promise<CashSession | null> {
-  const snap = await getDocs(query(col, where("estado", "==", "abierta"), limit(1)));
+  const snap = await getDocs(query(col(), where("estado", "==", "abierta"), limit(1)));
   if (snap.empty) return null;
   const d = snap.docs[0];
   return { id: d.id, ...(d.data() as any) };
@@ -27,7 +27,7 @@ export async function getOpenSession(): Promise<CashSession | null> {
 export async function openSession(usuarioId: string, usuarioNombre: string) {
   const open = await getOpenSession();
   if (open) return open;
-  const ref = await addDoc(col, {
+  const ref = await addDoc(col(), {
     fechaApertura: serverTimestamp(),
     usuarioId,
     usuarioNombre,
@@ -75,6 +75,6 @@ export async function closeSession(id: string) {
 }
 
 export async function listSessions(): Promise<CashSession[]> {
-  const snap = await getDocs(query(col, orderBy("fechaApertura", "desc"), limit(60)));
+  const snap = await getDocs(query(col(), orderBy("fechaApertura", "desc"), limit(60)));
   return snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
 }

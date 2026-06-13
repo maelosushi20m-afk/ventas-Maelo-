@@ -13,17 +13,17 @@ import {
 import { db } from "@/lib/firebase/client";
 import { Promotion } from "@/types";
 
-const col = collection(db, "promotions");
+const col = () => collection(db, "promotions");
 
 export async function listPromotions(soloActivos = false): Promise<Promotion[]> {
-  const snap = await getDocs(col);
+  const snap = await getDocs(col());
   const all = snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) })) as Promotion[];
   const filtered = soloActivos ? all.filter((p) => p.activo !== false) : all;
   return filtered.sort((a, b) => (a.precio || 0) - (b.precio || 0));
 }
 
 export async function createPromotion(data: Omit<Promotion, "id" | "createdAt">) {
-  return addDoc(col, { ...data, createdAt: serverTimestamp() });
+  return addDoc(col(), { ...data, createdAt: serverTimestamp() });
 }
 
 export async function updatePromotion(id: string, data: Partial<Promotion>) {

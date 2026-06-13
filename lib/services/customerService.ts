@@ -14,15 +14,15 @@ import {
 import { db } from "@/lib/firebase/client";
 import { Customer } from "@/types";
 
-const col = collection(db, "customers");
+const col = () => collection(db, "customers");
 
 export async function listCustomers(): Promise<Customer[]> {
-  const snap = await getDocs(query(col, orderBy("totalGastado", "desc")));
+  const snap = await getDocs(query(col(), orderBy("totalGastado", "desc")));
   return snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
 }
 
 export async function findCustomerByPhone(telefono: string): Promise<Customer | null> {
-  const snap = await getDocs(query(col, where("telefono", "==", telefono), limit(1)));
+  const snap = await getDocs(query(col(), where("telefono", "==", telefono), limit(1)));
   if (snap.empty) return null;
   const d = snap.docs[0];
   return { id: d.id, ...(d.data() as any) };
@@ -51,7 +51,7 @@ export async function upsertCustomerFromOrder(input: {
     });
     return existing.id;
   }
-  const ref = await addDoc(col, {
+  const ref = await addDoc(col(), {
     nombre: input.nombre,
     telefono: input.telefono,
     direccion: input.direccion || "",

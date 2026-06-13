@@ -14,10 +14,10 @@ import {
 import { db } from "@/lib/firebase/client";
 import { Product } from "@/types";
 
-const col = collection(db, "products");
+const col = () => collection(db, "products");
 
 export async function listProducts(soloActivos = false): Promise<Product[]> {
-  const snap = await getDocs(col);
+  const snap = await getDocs(col());
   const all = snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) })) as Product[];
   const filtered = soloActivos ? all.filter((p) => p.activo !== false) : all;
   return filtered.sort((a, b) => (a.nombre || "").localeCompare(b.nombre || ""));
@@ -29,7 +29,7 @@ export async function getProduct(id: string): Promise<Product | null> {
 }
 
 export async function createProduct(data: Omit<Product, "id" | "createdAt">) {
-  return addDoc(col, { ...data, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+  return addDoc(col(), { ...data, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
 }
 
 export async function updateProduct(id: string, data: Partial<Product>) {

@@ -17,7 +17,7 @@ import { db } from "@/lib/firebase/client";
 import { Order, OrderStatus } from "@/types";
 import { upsertCustomerFromOrder } from "./customerService";
 
-const col = collection(db, "orders");
+const col = () => collection(db, "orders");
 
 async function nextOrderNumber(): Promise<number> {
   const ref = doc(db, "counters", "orderNumber");
@@ -51,7 +51,7 @@ export async function createOrder(input: CreateOrderInput) {
     direccion: input.direccion,
     total: input.total
   });
-  const ref = await addDoc(col, {
+  const ref = await addDoc(col(), {
     numeroPedido,
     fecha: serverTimestamp(),
     clienteId: clienteId || null,
@@ -106,7 +106,7 @@ export async function getOrder(id: string): Promise<Order | null> {
 
 export async function listOrdersRange(from: Date, to: Date): Promise<Order[]> {
   const q = query(
-    col,
+    col(),
     where("fecha", ">=", Timestamp.fromDate(from)),
     where("fecha", "<=", Timestamp.fromDate(to)),
     orderBy("fecha", "desc")
@@ -116,14 +116,14 @@ export async function listOrdersRange(from: Date, to: Date): Promise<Order[]> {
 }
 
 export async function listLatestOrders(n = 10): Promise<Order[]> {
-  const q = query(col, orderBy("fecha", "desc"), limit(n));
+  const q = query(col(), orderBy("fecha", "desc"), limit(n));
   const snap = await getDocs(q);
   return snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
 }
 
 export async function searchOrders(termino: string): Promise<Order[]> {
   const term = termino.trim().toLowerCase();
-  const snap = await getDocs(query(col, orderBy("fecha", "desc"), limit(200)));
+  const snap = await getDocs(query(col(), orderBy("fecha", "desc"), limit(200)));
   return snap.docs
     .map((d) => ({ id: d.id, ...(d.data() as any) }) as Order)
     .filter((o) => {
