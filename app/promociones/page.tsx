@@ -10,7 +10,8 @@ import {
 import { Promotion } from "@/types";
 import { useState } from "react";
 import toast from "react-hot-toast";
-import { formatCLP } from "@/lib/utils";
+import { formatCLP, toActor } from "@/lib/utils";
+import { useAuth } from "@/lib/firebase/auth-context";
 import { Pencil, Trash2 } from "lucide-react";
 import { ImageUpload } from "@/components/ui/ImageUpload";
 
@@ -25,6 +26,8 @@ const empty = {
 
 export default function PromocionesPage() {
   const qc = useQueryClient();
+  const { appUser } = useAuth();
+  const actor = toActor(appUser);
   const { data: promos = [] } = useQuery({ queryKey: ["promotions"], queryFn: () => listPromotions() });
   const [form, setForm] = useState<any>(empty);
   const [editing, setEditing] = useState<string | null>(null);
@@ -33,10 +36,10 @@ export default function PromocionesPage() {
     if (!form.nombre || !form.precio) return toast.error("Nombre y precio requeridos");
     try {
       if (editing) {
-        await updatePromotion(editing, form);
+        await updatePromotion(editing, form, actor);
         toast.success("Actualizada");
       } else {
-        await createPromotion(form);
+        await createPromotion(form, actor);
         toast.success("Creada");
       }
       setForm(empty); setEditing(null);
@@ -58,12 +61,12 @@ export default function PromocionesPage() {
 
   const remove = async (id: string) => {
     if (!confirm("¿Eliminar?")) return;
-    await deletePromotion(id);
+    await deletePromotion(id, actor);
     qc.invalidateQueries({ queryKey: ["promotions"] });
   };
 
   return (
-    <AppShell title="Promociones" roles={["SUPER_ADMIN"]}>
+    <AppShell title="Promociones">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
         <div className="card">
           <h3 className="font-semibold text-brand-gold mb-3">{editing ? "Editar" : "Nueva"} promoción</h3>

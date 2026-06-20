@@ -10,7 +10,8 @@ import {
 import { PRODUCT_CATEGORIES, Product, ProductCategory } from "@/types";
 import { useState } from "react";
 import toast from "react-hot-toast";
-import { formatCLP } from "@/lib/utils";
+import { formatCLP, toActor } from "@/lib/utils";
+import { useAuth } from "@/lib/firebase/auth-context";
 import { Pencil, Trash2, Plus } from "lucide-react";
 
 const empty = {
@@ -24,6 +25,8 @@ const empty = {
 
 export default function ProductosPage() {
   const qc = useQueryClient();
+  const { appUser } = useAuth();
+  const actor = toActor(appUser);
   const { data: products = [] } = useQuery({ queryKey: ["products"], queryFn: () => listProducts() });
   const [form, setForm] = useState<any>(empty);
   const [editing, setEditing] = useState<string | null>(null);
@@ -32,10 +35,10 @@ export default function ProductosPage() {
     if (!form.nombre || !form.precioNormal) return toast.error("Nombre y precio requeridos");
     try {
       if (editing) {
-        await updateProduct(editing, form);
+        await updateProduct(editing, form, actor);
         toast.success("Actualizado");
       } else {
-        await createProduct(form);
+        await createProduct(form, actor);
         toast.success("Creado");
       }
       setForm(empty);
@@ -61,14 +64,14 @@ export default function ProductosPage() {
 
   const remove = async (id: string) => {
     if (!confirm("¿Eliminar?")) return;
-    await deleteProduct(id);
+    await deleteProduct(id, actor);
     toast.success("Eliminado");
     qc.invalidateQueries({ queryKey: ["products"] });
     qc.invalidateQueries({ queryKey: ["products", "active"] });
   };
 
   return (
-    <AppShell title="Productos" roles={["SUPER_ADMIN"]}>
+    <AppShell title="Productos">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
         <div className="card lg:col-span-1">
           <h3 className="font-semibold text-brand-gold mb-3">

@@ -95,7 +95,7 @@ export default function POSPage() {
         clienteNombre, telefono, direccion, observaciones,
         items, total, metodoPago,
         vendedorId: appUser?.uid, vendedorNombre: appUser?.name
-      });
+      }, appUser ? { uid: appUser.uid, email: appUser.email, name: appUser.name } : undefined);
       toast.success(`Pedido #${r.numeroPedido} creado`);
       setItems([]); setClienteNombre(""); setTelefono(""); setDireccion(""); setObservaciones(""); setClienteQuery("");
     } catch (e: any) { toast.error(e.message); }
@@ -103,7 +103,7 @@ export default function POSPage() {
   };
 
   return (
-    <AppShell title="Nuevo pedido" roles={["SUPER_ADMIN", "TRABAJADOR"]}>
+    <AppShell title="Nuevo pedido">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
         <div className="lg:col-span-2 card order-1 lg:order-none">
           <div className="flex gap-2 flex-wrap mb-3">

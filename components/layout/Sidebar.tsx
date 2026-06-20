@@ -44,7 +44,7 @@ const NAV: NavItem[] = [
   { href: "/caja", label: "Caja", icon: Wallet, roles: ["SUPER_ADMIN"] },
   { href: "/reportes", label: "Reportes", icon: BarChart3, roles: ["SUPER_ADMIN"] },
   { href: "/usuarios", label: "Usuarios", icon: Shield, roles: ["SUPER_ADMIN"] },
-  { href: "/auditoria", label: "Auditoría", icon: ScrollText, roles: ["SUPER_ADMIN"] },
+  { href: "/auditoria", label: "Historial de Actividad", icon: ScrollText },
 ];
 
 export function Sidebar() {
@@ -52,11 +52,8 @@ export function Sidebar() {
   const { user, appUser, logout } = useAuth();
   const [open, setOpen] = useState(false);
 
-  const visibleNav = NAV.filter((n) => {
-    if (!n.roles) return true; // sin restricción
-    if (!appUser) return false;
-    return n.roles.includes(appUser.role);
-  });
+  // Roles desactivados: todos los módulos visibles para cualquier usuario autenticado.
+  const visibleNav = NAV;
 
   // Cerrar sidebar al cambiar de ruta
   useEffect(() => { setOpen(false); }, [pathname]);

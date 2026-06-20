@@ -4,7 +4,8 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { listLatestOrders, searchOrders, updateOrderStatus } from "@/lib/services/orderService";
 import { ORDER_STATUSES, Order, OrderStatus, PAYMENT_METHODS, PaymentMethod } from "@/types";
-import { formatCLP, toDate } from "@/lib/utils";
+import { formatCLP, toDate, toActor } from "@/lib/utils";
+import { useAuth } from "@/lib/firebase/auth-context";
 import toast from "react-hot-toast";
 import { Search, Printer } from "lucide-react";
 import Link from "next/link";
@@ -20,6 +21,8 @@ const colorEstado: Record<OrderStatus, string> = {
 
 export default function PedidosPage() {
   const qc = useQueryClient();
+  const { appUser } = useAuth();
+  const actor = toActor(appUser);
   const [term, setTerm] = useState("");
   const [filterEstado, setFilterEstado] = useState<OrderStatus | "">("");
   const [filterPago, setFilterPago] = useState<PaymentMethod | "">("");
@@ -40,7 +43,7 @@ export default function PedidosPage() {
 
   const cambiar = async (id: string, estado: OrderStatus) => {
     try {
-      await updateOrderStatus(id, estado);
+      await updateOrderStatus(id, estado, actor);
       toast.success("Estado actualizado");
       qc.invalidateQueries({ queryKey: ["orders"] });
     } catch (e: any) { toast.error(e.message); }

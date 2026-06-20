@@ -3,19 +3,16 @@ import { ReactNode } from "react";
 import { Sidebar } from "./Sidebar";
 import { NotificationBell } from "./NotificationBell";
 import { AuthGuard } from "./AuthGuard";
-import { Role } from "@/types";
 
 export function AppShell({
   children,
   title,
-  roles
 }: {
   children: ReactNode;
   title: string;
-  roles?: Role[];
 }) {
   return (
-    <AuthGuard roles={roles}>
+    <AuthGuard>
       <div className="min-h-screen flex">
         <Sidebar />
         <div className="flex-1 flex flex-col min-w-0">

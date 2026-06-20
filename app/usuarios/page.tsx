@@ -4,13 +4,11 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   listUsers,
   setUserActive,
-  setUserRole,
   createUser,
   resetUserPassword,
   updateUserProfile,
   logAudit,
 } from "@/lib/services/userService";
-import { Role, ROLES_LABELS, SUPER_ADMIN_EMAIL } from "@/types";
 import { useAuth } from "@/lib/firebase/auth-context";
 import toast from "react-hot-toast";
 import { useState } from "react";
@@ -25,19 +23,15 @@ import {
   Loader2,
 } from "lucide-react";
 
-const ASSIGNABLE_ROLES: Role[] = ["TRABAJADOR", "AYUDANTE"];
-
 interface CreateForm {
   name: string;
   email: string;
-  role: Role;
   password: string;
 }
 
 interface EditForm {
   uid: string;
   name: string;
-  role: Role;
 }
 
 interface ResetForm {
@@ -57,7 +51,7 @@ export default function UsuariosPage() {
   const [busy, setBusy] = useState(false);
 
   const [createForm, setCreateForm] = useState<CreateForm>({
-    name: "", email: "", role: "TRABAJADOR", password: "",
+    name: "", email: "", password: "",
   });
 
   const audit = (accion: string, detalle?: string) => {
@@ -76,12 +70,13 @@ export default function UsuariosPage() {
     e.preventDefault();
     setBusy(true);
     try {
-      const { uid } = await createUser(createForm);
+      // role se mantiene fijo por compatibilidad con el backend; ya no se usa para permisos.
+      await createUser({ ...createForm, role: "TRABAJADOR" });
       toast.success("Usuario creado");
-      audit("crear_usuario", `${createForm.email} - ${createForm.role}`);
+      audit("crear_usuario", createForm.email);
       qc.invalidateQueries({ queryKey: ["users"] });
       setShowCreate(false);
-      setCreateForm({ name: "", email: "", role: "TRABAJADOR", password: "" });
+      setCreateForm({ name: "", email: "", password: "" });
     } catch (err: any) {
       toast.error(err.message);
     } finally {
@@ -94,9 +89,9 @@ export default function UsuariosPage() {
     if (!editForm) return;
     setBusy(true);
     try {
-      await updateUserProfile(editForm.uid, { name: editForm.name, role: editForm.role });
+      await updateUserProfile(editForm.uid, { name: editForm.name });
       toast.success("Usuario actualizado");
-      audit("editar_usuario", `uid:${editForm.uid} nombre:${editForm.name} rol:${editForm.role}`);
+      audit("editar_usuario", `uid:${editForm.uid} nombre:${editForm.name}`);
       qc.invalidateQueries({ queryKey: ["users"] });
       setEditForm(null);
     } catch (err: any) {
@@ -106,8 +101,7 @@ export default function UsuariosPage() {
     }
   };
 
-  const handleToggle = async (uid: string, email: string, activo: boolean) => {
-    if (email === SUPER_ADMIN_EMAIL) return;
+  const handleToggle = async (uid: string, activo: boolean) => {
     setBusy(true);
     try {
       await setUserActive(uid, !activo);
@@ -137,10 +131,10 @@ export default function UsuariosPage() {
   };
 
   return (
-    <AppShell title="Gestión de Usuarios" roles={["SUPER_ADMIN"]}>
+    <AppShell title="Gestión de Usuarios">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
-        <p className="text-sm text-gray-400">Solo el Super Admin puede gestionar usuarios.</p>
+        <p className="text-sm text-gray-400">Usuarios con acceso al sistema.</p>
         <button
           onClick={() => setShowCreate(true)}
           className="btn-primary flex items-center gap-2 text-sm"
@@ -156,72 +150,55 @@ export default function UsuariosPage() {
             <Loader2 size={24} className="animate-spin text-brand-gold" />
           </div>
         ) : (
-          <table className="table min-w-[600px]">
+          <table className="table min-w-[520px]">
             <thead>
               <tr>
                 <th>Nombre</th>
                 <th>Email</th>
-                <th>Rol</th>
                 <th>Estado</th>
                 <th>Acciones</th>
               </tr>
             </thead>
             <tbody>
-              {users.map((u) => {
-                const isSuperAdmin = u.email === SUPER_ADMIN_EMAIL;
-                return (
-                  <tr key={u.uid}>
-                    <td className="font-medium">{u.name || "—"}</td>
-                    <td className="text-sm text-gray-300">{u.email}</td>
-                    <td>
-                      <span className={`badge text-xs ${
-                        u.role === "SUPER_ADMIN"
-                          ? "bg-brand-gold/20 text-brand-gold"
-                          : u.role === "TRABAJADOR"
-                          ? "bg-blue-500/20 text-blue-400"
-                          : "bg-gray-500/20 text-gray-400"
-                      }`}>
-                        {ROLES_LABELS[u.role] || u.role}
-                      </span>
-                    </td>
-                    <td>
+              {users.map((u) => (
+                <tr key={u.uid}>
+                  <td className="font-medium">{u.name || "—"}</td>
+                  <td className="text-sm text-gray-300">{u.email}</td>
+                  <td>
+                    <button
+                      disabled={busy}
+                      onClick={() => handleToggle(u.uid, u.activo)}
+                      className={`flex items-center gap-1.5 text-sm transition-colors ${
+                        u.activo ? "text-green-400 hover:text-green-300" : "text-gray-500 hover:text-gray-400"
+                      } disabled:opacity-50 disabled:cursor-not-allowed`}
+                    >
+                      {u.activo ? <ToggleRight size={18} /> : <ToggleLeft size={18} />}
+                      {u.activo ? "Activo" : "Inactivo"}
+                    </button>
+                  </td>
+                  <td>
+                    <div className="flex items-center gap-2">
                       <button
-                        disabled={isSuperAdmin || busy}
-                        onClick={() => handleToggle(u.uid, u.email, u.activo)}
-                        className={`flex items-center gap-1.5 text-sm transition-colors ${
-                          u.activo ? "text-green-400 hover:text-green-300" : "text-gray-500 hover:text-gray-400"
-                        } disabled:opacity-50 disabled:cursor-not-allowed`}
+                        onClick={() => setEditForm({ uid: u.uid, name: u.name })}
+                        title="Editar"
+                        className="p-1.5 rounded hover:bg-brand-gray text-gray-400 hover:text-white transition-colors"
                       >
-                        {u.activo ? <ToggleRight size={18} /> : <ToggleLeft size={18} />}
-                        {u.activo ? "Activo" : "Inactivo"}
+                        <Pencil size={14} />
                       </button>
-                    </td>
-                    <td>
-                      {!isSuperAdmin && (
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => setEditForm({ uid: u.uid, name: u.name, role: u.role })}
-                            title="Editar"
-                            className="p-1.5 rounded hover:bg-brand-gray text-gray-400 hover:text-white transition-colors"
-                          >
-                            <Pencil size={14} />
-                          </button>
-                          <button
-                            onClick={() => setResetForm({ uid: u.uid, name: u.name, newPassword: "" })}
-                            title="Restablecer contraseña"
-                            className="p-1.5 rounded hover:bg-brand-gray text-gray-400 hover:text-yellow-400 transition-colors"
-                          >
-                            <KeyRound size={14} />
-                          </button>
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
+                      <button
+                        onClick={() => setResetForm({ uid: u.uid, name: u.name, newPassword: "" })}
+                        title="Restablecer contraseña"
+                        className="p-1.5 rounded hover:bg-brand-gray text-gray-400 hover:text-yellow-400 transition-colors"
+                      >
+                        <KeyRound size={14} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
               {users.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="text-center text-gray-400 py-6">Sin usuarios</td>
+                  <td colSpan={4} className="text-center text-gray-400 py-6">Sin usuarios</td>
                 </tr>
               )}
             </tbody>
@@ -251,17 +228,6 @@ export default function UsuariosPage() {
                 value={createForm.email}
                 onChange={(e) => setCreateForm((p) => ({ ...p, email: e.target.value }))}
               />
-            </Field>
-            <Field label="Rol">
-              <select
-                className="input"
-                value={createForm.role}
-                onChange={(e) => setCreateForm((p) => ({ ...p, role: e.target.value as Role }))}
-              >
-                {ASSIGNABLE_ROLES.map((r) => (
-                  <option key={r} value={r}>{ROLES_LABELS[r]}</option>
-                ))}
-              </select>
             </Field>
             <Field label="Contraseña inicial">
               <input
@@ -298,17 +264,6 @@ export default function UsuariosPage() {
                 value={editForm.name}
                 onChange={(e) => setEditForm((p) => p ? { ...p, name: e.target.value } : p)}
               />
-            </Field>
-            <Field label="Rol">
-              <select
-                className="input"
-                value={editForm.role}
-                onChange={(e) => setEditForm((p) => p ? { ...p, role: e.target.value as Role } : p)}
-              >
-                {ASSIGNABLE_ROLES.map((r) => (
-                  <option key={r} value={r}>{ROLES_LABELS[r]}</option>
-                ))}
-              </select>
             </Field>
             <div className="flex gap-2 pt-2">
               <button type="submit" disabled={busy} className="btn-primary flex-1 flex items-center justify-center gap-2">

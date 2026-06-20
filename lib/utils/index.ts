@@ -1,8 +1,15 @@
 import { clsx, ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { AppUser, AuditActor } from "@/types";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
+}
+
+/** Convierte el AppUser de sesión en un AuditActor para los services. */
+export function toActor(u: AppUser | null | undefined): AuditActor | undefined {
+  if (!u) return undefined;
+  return { uid: u.uid, email: u.email, name: u.name };
 }
 
 export function formatCLP(n: number) {

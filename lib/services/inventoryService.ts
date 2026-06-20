@@ -14,7 +14,8 @@ import {
   deleteDoc
 } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
-import { InventoryItem, InventoryMovement, MovementType } from "@/types";
+import { InventoryItem, InventoryMovement, MovementType, AuditActor } from "@/types";
+import { audit } from "./auditService";
 
 const col = () => collection(db, "inventory");
 const movCol = () => collection(db, "inventoryMovements");
@@ -33,22 +34,51 @@ export async function getInventoryItem(id: string): Promise<InventoryItem | null
 }
 
 export async function createInventoryItem(
-  data: Omit<InventoryItem, "id" | "createdAt" | "updatedAt">
+  data: Omit<InventoryItem, "id" | "createdAt" | "updatedAt">,
+  actor?: AuditActor
 ): Promise<string> {
   const ref = await addDoc(col(), {
     ...data,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp()
   });
+  await audit(actor, {
+    accion: "crear_item_inventario",
+    modulo: "inventario",
+    documentId: ref.id,
+    afterData: data,
+    detalle: `Ítem creado: ${data.nombre}`,
+  });
   return ref.id;
 }
 
-export async function updateInventoryItem(id: string, data: Partial<InventoryItem>) {
-  return updateDoc(doc(db, "inventory", id), { ...data, updatedAt: serverTimestamp() });
+export async function updateInventoryItem(
+  id: string,
+  data: Partial<InventoryItem>,
+  actor?: AuditActor
+) {
+  const before = await getInventoryItem(id);
+  await updateDoc(doc(db, "inventory", id), { ...data, updatedAt: serverTimestamp() });
+  await audit(actor, {
+    accion: "modificar_item_inventario",
+    modulo: "inventario",
+    documentId: id,
+    beforeData: before ?? undefined,
+    afterData: data,
+    detalle: `Ítem modificado: ${before?.nombre || id}`,
+  });
 }
 
-export async function deleteInventoryItem(id: string) {
-  return deleteDoc(doc(db, "inventory", id));
+export async function deleteInventoryItem(id: string, actor?: AuditActor) {
+  const before = await getInventoryItem(id);
+  await deleteDoc(doc(db, "inventory", id));
+  await audit(actor, {
+    accion: "eliminar_item_inventario",
+    modulo: "inventario",
+    documentId: id,
+    beforeData: before ?? undefined,
+    detalle: `Ítem eliminado: ${before?.nombre || id}`,
+  });
 }
 
 // ── Movimientos ────────────────────────────────────────────────
@@ -60,10 +90,11 @@ export async function registrarMovimiento(input: {
   motivo?: string;
   usuarioId?: string;
   usuarioNombre?: string;
+  actor?: AuditActor;
 }): Promise<{ stockResultante: number }> {
   const itemRef = doc(db, "inventory", input.itemId);
 
-  return runTransaction(db, async (tx) => {
+  const result = await runTransaction(db, async (tx) => {
     const snap = await tx.get(itemRef);
     if (!snap.exists()) throw new Error("Ítem no encontrado");
 
@@ -97,8 +128,26 @@ export async function registrarMovimiento(input: {
     };
 
     await addDoc(movCol(), movData);
-    return { stockResultante };
+    return { stockResultante, stockAnterior, itemNombre: item.nombre };
   });
+
+  // Auditoría fuera de la transacción
+  const accionMap: Record<MovementType, string> = {
+    entrada: "entrada_stock",
+    salida: "salida_stock",
+    ajuste: "ajuste_stock",
+  };
+  await audit(input.actor, {
+    accion: accionMap[input.tipo],
+    modulo: "inventario",
+    documentId: input.itemId,
+    beforeData: { stockActual: result.stockAnterior },
+    afterData: { stockActual: result.stockResultante },
+    observaciones: input.motivo,
+    detalle: `${result.itemNombre}: stock ${result.stockAnterior} → ${result.stockResultante} (${input.tipo})`,
+  });
+
+  return { stockResultante: result.stockResultante };
 }
 
 export async function listMovements(itemId?: string, limitN = 50): Promise<InventoryMovement[]> {

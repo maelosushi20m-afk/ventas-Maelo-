@@ -126,11 +126,12 @@ export default function InventarioPage() {
     if (form.stockSeguridad > form.stockMinimo) return toast.error("Stock seguridad debe ser ≤ stock mínimo");
     setSavingItem(true);
     try {
+      const actor = appUser ? { uid: appUser.uid, email: appUser.email, name: appUser.name } : undefined;
       if (selected) {
-        await updateInventoryItem(selected.id, form);
+        await updateInventoryItem(selected.id, form, actor);
         toast.success("Actualizado");
       } else {
-        await createInventoryItem(form);
+        await createInventoryItem(form, actor);
         toast.success("Producto creado");
       }
       qc.invalidateQueries({ queryKey: ["inventory"] });
@@ -141,7 +142,7 @@ export default function InventarioPage() {
 
   const removeItem = async (id: string) => {
     if (!confirm("¿Eliminar este producto del inventario?")) return;
-    await deleteInventoryItem(id);
+    await deleteInventoryItem(id, appUser ? { uid: appUser.uid, email: appUser.email, name: appUser.name } : undefined);
     toast.success("Eliminado");
     qc.invalidateQueries({ queryKey: ["inventory"] });
   };
@@ -166,7 +167,8 @@ export default function InventarioPage() {
         cantidad: movCantidad,
         motivo: movMotivo,
         usuarioId: appUser?.uid,
-        usuarioNombre: appUser?.name
+        usuarioNombre: appUser?.name,
+        actor: appUser ? { uid: appUser.uid, email: appUser.email, name: appUser.name } : undefined
       });
       toast.success(`Stock actualizado → ${stockResultante} ${selected.unidad}`);
       qc.invalidateQueries({ queryKey: ["inventory"] });
@@ -188,7 +190,7 @@ export default function InventarioPage() {
   };
 
   return (
-    <AppShell title="Inventario" roles={["SUPER_ADMIN"]}>
+    <AppShell title="Inventario">
 
       {/* ── alertas banner ── */}
       {alertas.length > 0 && (

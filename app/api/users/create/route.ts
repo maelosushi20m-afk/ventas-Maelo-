@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { adminAuth, adminDb } from "@/lib/firebase/admin";
-import { Role, SUPER_ADMIN_EMAIL } from "@/types";
+import { Role } from "@/types";
 import { FieldValue } from "firebase-admin/firestore";
 
 export const dynamic = "force-dynamic";
@@ -15,19 +15,12 @@ export async function POST(req: Request) {
       password: string;
     };
 
-    // Validaciones
-    if (!email || !name || !role || !password) {
+    // Validaciones mínimas (sin roles ni restricciones)
+    if (!email || !name || !password) {
       return NextResponse.json({ error: "Faltan campos obligatorios" }, { status: 400 });
     }
     if (password.length < 6) {
       return NextResponse.json({ error: "La contraseña debe tener al menos 6 caracteres" }, { status: 400 });
-    }
-    if (!["TRABAJADOR", "AYUDANTE"].includes(role)) {
-      return NextResponse.json({ error: "Rol inválido" }, { status: 400 });
-    }
-    // No se puede crear otro SUPER_ADMIN
-    if (email === SUPER_ADMIN_EMAIL) {
-      return NextResponse.json({ error: "No se puede crear este usuario" }, { status: 403 });
     }
 
     // Crear en Firebase Auth

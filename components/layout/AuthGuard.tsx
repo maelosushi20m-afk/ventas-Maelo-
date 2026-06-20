@@ -2,26 +2,20 @@
 import { ReactNode, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/firebase/auth-context";
-import { Role } from "@/types";
 
 export function AuthGuard({
   children,
-  roles,
 }: {
   children: ReactNode;
-  roles?: Role[];
 }) {
-  const { user, appUser, loading } = useAuth();
+  const { user, loading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
     if (loading) return;
+    // Solo se exige sesión iniciada. Sin roles ni cuenta "activa".
     if (!user) { router.replace("/login"); return; }
-    // Si se especifican roles y el usuario no tiene el rol requerido, redirigir
-    if (roles && roles.length > 0 && appUser && !roles.includes(appUser.role)) {
-      router.replace("/sin-acceso");
-    }
-  }, [user, appUser, loading, router, roles]);
+  }, [user, loading, router]);
 
   if (loading) {
     return (
@@ -34,6 +28,5 @@ export function AuthGuard({
     );
   }
   if (!user) return null;
-  if (roles && roles.length > 0 && appUser && !roles.includes(appUser.role)) return null;
   return <>{children}</>;
 }

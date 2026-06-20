@@ -2,113 +2,14 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ── Helpers ──────────────────────────────────────────────────
+    // Sin roles ni cuenta "activa": basta con tener sesión iniciada.
     function isSignedIn() {
       return request.auth != null;
     }
-    function userDoc() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
-    }
-    function role() {
-      // El rol está guardado en el documento users/{uid}.role
-      return userDoc().role;
-    }
-    function isSuperAdmin() {
-      return isSignedIn() && role() == "SUPER_ADMIN";
-    }
-    function isTrabajador() {
-      return isSignedIn() && (role() == "TRABAJADOR" || role() == "SUPER_ADMIN");
-    }
-    function isAyudante() {
-      return isSignedIn() && (role() == "AYUDANTE" || role() == "TRABAJADOR" || role() == "SUPER_ADMIN");
-    }
-    function isActive() {
-      return userDoc().activo == true;
-    }
-    function canAccess() {
-      return isSignedIn() && isActive();
-    }
 
-    // ── Usuarios ─────────────────────────────────────────────────
-    // Solo SUPER_ADMIN puede leer la lista completa y modificar usuarios
-    match /users/{userId} {
-      allow read: if canAccess() && (request.auth.uid == userId || isSuperAdmin());
-      allow write: if isSuperAdmin();
-    }
-
-    // ── Contador de folios (necesario para crear pedidos) ────────
-    match /counters/{counterId} {
-      allow read: if canAccess();
-      allow write: if canAccess() && isTrabajador();
-    }
-
-    // ── Pedidos ──────────────────────────────────────────────────
-    match /orders/{orderId} {
-      allow read: if canAccess();
-      allow create: if canAccess() && isTrabajador();
-      allow update: if canAccess() && (
-        isSuperAdmin() ||
-        isTrabajador() ||
-        // Ayudante solo puede cambiar estado a "Listo"
-        (isAyudante() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["estado", "updatedAt"]))
-      );
-      allow delete: if isSuperAdmin();
-    }
-
-    // ── Productos ────────────────────────────────────────────────
-    match /products/{productId} {
-      allow read: if canAccess();
-      allow write: if isSuperAdmin();
-    }
-
-    // ── Promociones ──────────────────────────────────────────────
-    match /promotions/{promoId} {
-      allow read: if canAccess();
-      allow write: if isSuperAdmin();
-    }
-
-    // ── Inventario ───────────────────────────────────────────────
-    match /inventory/{itemId} {
-      allow read: if canAccess() && isTrabajador();
-      allow write: if isSuperAdmin();
-    }
-    match /inventoryMovements/{movId} {
-      allow read: if isSuperAdmin();
-      allow create: if isSuperAdmin();
-    }
-
-    // ── Clientes ─────────────────────────────────────────────────
-    match /customers/{customerId} {
-      allow read, write: if canAccess() && isSuperAdmin();
-    }
-
-    // ── Caja ─────────────────────────────────────────────────────
-    match /cashSessions/{sessionId} {
-      allow read, write: if isSuperAdmin();
-    }
-
-    // ── Reportes ─────────────────────────────────────────────────
-    match /reports/{reportId} {
-      allow read, write: if isSuperAdmin();
-    }
-
-    // ── Notificaciones ───────────────────────────────────────────
-    match /notifications/{notifId} {
-      allow read: if canAccess();
-      allow write: if canAccess() && isTrabajador();
-    }
-
-    // ── Auditoría (solo escritura desde cliente, lectura solo admin) ──
-    match /audit_logs/{logId} {
-      allow read: if isSuperAdmin();
-      allow create: if canAccess(); // cualquier usuario autenticado puede crear logs
-      allow update, delete: if false; // inmutable
-    }
-
-    // ── Cierre: cualquier otra colección queda denegada ──────────
+    // Cualquier usuario autenticado puede leer y escribir cualquier colección.
     match /{document=**} {
-      allow read, write: if false;
+      allow read, write: if isSignedIn();
     }
   }
 }
-

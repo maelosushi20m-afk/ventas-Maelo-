@@ -91,7 +91,7 @@ export default function DashboardPage() {
   );
 
   return (
-    <AppShell title="Dashboard" roles={["SUPER_ADMIN"]}>
+    <AppShell title="Dashboard">
       {/* Stats principales */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
         <Stat label="Ventas hoy" value={formatCLP(sum(day.data))} icon={TrendingUp} />

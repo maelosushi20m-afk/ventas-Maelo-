@@ -25,7 +25,7 @@ export default function ReportesPage() {
   const runRange = () => run(startOfDay(new Date(from)), endOfDay(new Date(to)));
 
   return (
-    <AppShell title="Reportes" roles={["SUPER_ADMIN"]}>
+    <AppShell title="Reportes">
       <div className="card mb-4">
         <div className="flex flex-wrap gap-2 mb-3">
           <button className="btn-ghost" onClick={() => run(startOfDay(), endOfDay())}>Hoy</button>

@@ -63,7 +63,7 @@ export const PRODUCT_CATEGORIES: ProductCategory[] = [
   "Extras"
 ];
 
-export interface Product {
+export interface Product extends SoftDeletable {
   id: string;
   nombre: string;
   categoria: ProductCategory;
@@ -75,7 +75,7 @@ export interface Product {
   updatedAt?: Timestamp | Date;
 }
 
-export interface Promotion {
+export interface Promotion extends SoftDeletable {
   id: string;
   nombre: string;
   descripcion?: string;
@@ -86,7 +86,7 @@ export interface Promotion {
   createdAt: Timestamp | Date;
 }
 
-export interface Customer {
+export interface Customer extends SoftDeletable {
   id: string;
   nombre: string;
   telefono: string;
@@ -134,7 +134,7 @@ export const PAYMENT_METHODS: PaymentMethod[] = [
   "Crédito"
 ];
 
-export interface Order {
+export interface Order extends SoftDeletable {
   id: string;
   numeroPedido: number;
   fecha: Timestamp | Date;
@@ -230,14 +230,42 @@ export interface AppNotification {
 }
 
 // ── Auditoría ──────────────────────────────────────────────────
+export type AuditModule =
+  | "pedidos"
+  | "productos"
+  | "inventario"
+  | "promociones"
+  | "clientes"
+  | "usuarios"
+  | "caja"
+  | "auth";
+
 export interface AuditLog {
   id: string;
   usuarioId: string;
   usuarioEmail: string;
   usuarioNombre: string;
-  accion: string;
-  modulo: string;
-  detalle?: string;
+  accion: string;            // ej: "crear_producto", "cambiar_precio"
+  modulo: AuditModule | string;
+  documentId?: string;       // ID del documento afectado
+  beforeData?: any;          // valor anterior
+  afterData?: any;           // valor nuevo
+  observaciones?: string;
+  detalle?: string;          // resumen legible (compat)
   ip?: string;
   createdAt: Timestamp | Date;
+}
+
+// Actor que ejecuta una acción (se pasa a los services para auditar)
+export interface AuditActor {
+  uid: string;
+  email: string;
+  name: string;
+}
+
+// Campos de borrado lógico compartidos
+export interface SoftDeletable {
+  deleted?: boolean;
+  deletedAt?: Timestamp | Date;
+  deletedBy?: string;        // email del usuario que eliminó
 }

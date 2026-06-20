@@ -14,8 +14,9 @@ import {
   where
 } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
-import { Order, OrderStatus } from "@/types";
+import { Order, OrderStatus, AuditActor } from "@/types";
 import { upsertCustomerFromOrder } from "./customerService";
+import { audit } from "./auditService";
 
 const col = () => collection(db, "orders");
 
@@ -43,7 +44,7 @@ export interface CreateOrderInput {
   vendedorNombre?: string;
 }
 
-export async function createOrder(input: CreateOrderInput) {
+export async function createOrder(input: CreateOrderInput, actor?: AuditActor) {
   const numeroPedido = await nextOrderNumber();
   const clienteId = await upsertCustomerFromOrder({
     nombre: input.clienteNombre,
@@ -65,6 +66,7 @@ export async function createOrder(input: CreateOrderInput) {
     estado: input.estado || "Pendiente",
     vendedorId: input.vendedorId || null,
     vendedorNombre: input.vendedorNombre || null,
+    deleted: false,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp()
   });
@@ -76,11 +78,27 @@ export async function createOrder(input: CreateOrderInput) {
     createdAt: serverTimestamp(),
     destinatarioRol: "todos"
   });
+  await audit(actor, {
+    accion: "crear_pedido",
+    modulo: "pedidos",
+    documentId: ref.id,
+    afterData: { numeroPedido, clienteNombre: input.clienteNombre, total: input.total, items: input.items },
+    detalle: `Pedido #${numeroPedido} creado - ${input.clienteNombre} (${input.total})`,
+  });
   return { id: ref.id, numeroPedido };
 }
 
-export async function updateOrderStatus(id: string, estado: OrderStatus) {
+export async function updateOrderStatus(id: string, estado: OrderStatus, actor?: AuditActor) {
+  const before = await getOrder(id);
   await updateDoc(doc(db, "orders", id), { estado, updatedAt: serverTimestamp() });
+  await audit(actor, {
+    accion: "cambiar_estado_pedido",
+    modulo: "pedidos",
+    documentId: id,
+    beforeData: { estado: before?.estado },
+    afterData: { estado },
+    detalle: `Pedido #${before?.numeroPedido ?? id}: ${before?.estado ?? "?"} → ${estado}`,
+  });
   const tipo =
     estado === "Listo" ? "listo" :
     estado === "Entregado" ? "entregado" :
@@ -104,6 +122,52 @@ export async function getOrder(id: string): Promise<Order | null> {
   return s.exists() ? ({ id: s.id, ...(s.data() as any) }) : null;
 }
 
+export async function updateOrder(id: string, data: Partial<Order>, actor?: AuditActor) {
+  const before = await getOrder(id);
+  await updateDoc(doc(db, "orders", id), { ...data, updatedAt: serverTimestamp() });
+  await audit(actor, {
+    accion: "modificar_pedido",
+    modulo: "pedidos",
+    documentId: id,
+    beforeData: before ?? undefined,
+    afterData: data,
+    detalle: `Pedido #${before?.numeroPedido ?? id} modificado`,
+  });
+}
+
+/** Borrado lógico de pedido. */
+export async function deleteOrder(id: string, actor?: AuditActor) {
+  const before = await getOrder(id);
+  await updateDoc(doc(db, "orders", id), {
+    deleted: true,
+    deletedAt: serverTimestamp(),
+    deletedBy: actor?.email || "desconocido",
+    updatedAt: serverTimestamp(),
+  });
+  await audit(actor, {
+    accion: "eliminar_pedido",
+    modulo: "pedidos",
+    documentId: id,
+    beforeData: before ?? undefined,
+    detalle: `Pedido #${before?.numeroPedido ?? id} eliminado`,
+  });
+}
+
+export async function restoreOrder(id: string, actor?: AuditActor) {
+  await updateDoc(doc(db, "orders", id), {
+    deleted: false,
+    deletedAt: null,
+    deletedBy: null,
+    updatedAt: serverTimestamp(),
+  });
+  await audit(actor, {
+    accion: "restaurar_pedido",
+    modulo: "pedidos",
+    documentId: id,
+    detalle: `Pedido ${id} restaurado`,
+  });
+}
+
 export async function listOrdersRange(from: Date, to: Date): Promise<Order[]> {
   const q = query(
     col(),
@@ -112,13 +176,18 @@ export async function listOrdersRange(from: Date, to: Date): Promise<Order[]> {
     orderBy("fecha", "desc")
   );
   const snap = await getDocs(q);
-  return snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
+  return snap.docs
+    .map((d) => ({ id: d.id, ...(d.data() as any) }) as Order)
+    .filter((o) => o.deleted !== true);
 }
 
 export async function listLatestOrders(n = 10): Promise<Order[]> {
-  const q = query(col(), orderBy("fecha", "desc"), limit(n));
+  const q = query(col(), orderBy("fecha", "desc"), limit(n + 20));
   const snap = await getDocs(q);
-  return snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
+  return snap.docs
+    .map((d) => ({ id: d.id, ...(d.data() as any) }) as Order)
+    .filter((o) => o.deleted !== true)
+    .slice(0, n);
 }
 
 export async function searchOrders(termino: string): Promise<Order[]> {
@@ -126,6 +195,7 @@ export async function searchOrders(termino: string): Promise<Order[]> {
   const snap = await getDocs(query(col(), orderBy("fecha", "desc"), limit(200)));
   return snap.docs
     .map((d) => ({ id: d.id, ...(d.data() as any) }) as Order)
+    .filter((o) => o.deleted !== true)
     .filter((o) => {
       return (
         String(o.numeroPedido).includes(term) ||
