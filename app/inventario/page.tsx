@@ -249,15 +249,15 @@ export default function InventarioPage() {
             <table className="table min-w-[700px]">
               <thead>
                 <tr>
-                  <th>Producto</th>
-                  <th>Categoría</th>
+                  <th className="min-w-[200px] w-[28%]">Producto</th>
                   <th className="text-center">Stock actual</th>
+                  <th className="text-center w-px whitespace-nowrap">Acciones</th>
+                  <th className="text-center">Estado</th>
                   <th className="text-center">Mín.</th>
                   <th className="text-center">Seg.</th>
+                  <th>Categoría</th>
                   <th>Unidad</th>
                   <th>Proveedor</th>
-                  <th className="text-center">Estado</th>
-                  <th></th>
                 </tr>
               </thead>
               <tbody>
@@ -265,20 +265,10 @@ export default function InventarioPage() {
                   const s = getStockStatus(item);
                   return (
                     <tr key={item.id} className={!item.activo ? "opacity-50" : ""}>
-                      <td className="font-medium">{item.nombre}</td>
-                      <td className="text-xs text-gray-400">{item.categoria}</td>
+                      <td className="font-medium min-w-[200px]">{item.nombre}</td>
                       <td className="text-center font-bold text-brand-gold">{item.stockActual}</td>
-                      <td className="text-center text-gray-400">{item.stockMinimo}</td>
-                      <td className="text-center text-gray-400">{item.stockSeguridad}</td>
-                      <td className="text-xs text-gray-400">{item.unidad}</td>
-                      <td className="text-xs text-gray-400">{item.proveedor || "—"}</td>
-                      <td className="text-center">
-                        <span className={`badge flex items-center gap-1 justify-center w-fit mx-auto ${statusColor[s]}`}>
-                          <StatusIcon s={s} /> {statusLabel[s]}
-                        </span>
-                      </td>
-                      <td>
-                        <div className="flex items-center gap-1 justify-end">
+                      <td className="w-px whitespace-nowrap">
+                        <div className="flex items-center gap-1 justify-center">
                           <button title="Agregar stock" onClick={() => openMov(item, "entrada")}
                             className="p-1.5 hover:text-green-400 transition"><ArrowDownCircle size={16} /></button>
                           <button title="Rebajar stock" onClick={() => openMov(item, "salida")}
@@ -291,6 +281,16 @@ export default function InventarioPage() {
                             className="p-1.5 hover:text-brand-red transition"><Trash2 size={16} /></button>
                         </div>
                       </td>
+                      <td className="text-center">
+                        <span className={`badge flex items-center gap-1 justify-center w-fit mx-auto ${statusColor[s]}`}>
+                          <StatusIcon s={s} /> {statusLabel[s]}
+                        </span>
+                      </td>
+                      <td className="text-center text-gray-400">{item.stockMinimo}</td>
+                      <td className="text-center text-gray-400">{item.stockSeguridad}</td>
+                      <td className="text-xs text-gray-400">{item.categoria}</td>
+                      <td className="text-xs text-gray-400">{item.unidad}</td>
+                      <td className="text-xs text-gray-400">{item.proveedor || "—"}</td>
                     </tr>
                   );
                 })}

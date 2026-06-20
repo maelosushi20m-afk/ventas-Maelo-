@@ -8,6 +8,10 @@ body {
   background: #0A0A0A;
   color: #FAFAFA;
   font-family: Inter, system-ui, sans-serif;
+  /* iOS notch / safe-area */
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  -webkit-text-size-adjust: 100%;
+  overscroll-behavior-y: none;
 }
 
 .card { @apply bg-brand-dark border border-brand-gray rounded-xl p-3 sm:p-4; }
