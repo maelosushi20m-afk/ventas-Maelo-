@@ -9,10 +9,12 @@ import {
 import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  updateProfile,
   signOut,
   User
 } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db } from "./client";
 import { AppUser, Role } from "@/types";
 
@@ -23,6 +25,7 @@ interface AuthContextValue {
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  register: (email: string, password: string, name: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -56,13 +59,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await signInWithEmailAndPassword(auth, email, password);
   };
 
+  const register = async (email: string, password: string, name: string) => {
+    const { user: newUser } = await createUserWithEmailAndPassword(auth, email, password);
+    await updateProfile(newUser, { displayName: name });
+    // Crear perfil en Firestore con rol TRABAJADOR y activo: false (pendiente aprobación)
+    await setDoc(doc(db, "users", newUser.uid), {
+      email,
+      name,
+      role: "TRABAJADOR" as Role,
+      activo: false,
+      createdAt: serverTimestamp(),
+    });
+  };
+
   const logout = async () => {
     await signOut(auth);
   };
 
   return (
     <AuthContext.Provider
-      value={{ user, appUser, role: appUser?.role ?? null, loading, login, logout }}
+      value={{ user, appUser, role: appUser?.role ?? null, loading, login, logout, register }}
     >
       {children}
     </AuthContext.Provider>

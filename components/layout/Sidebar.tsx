@@ -17,6 +17,7 @@ import {
   Menu,
   X,
   ScrollText,
+  type LucideIcon,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Role, ROLES_LABELS } from "@/types";
@@ -24,7 +25,7 @@ import { Role, ROLES_LABELS } from "@/types";
 interface NavItem {
   href: string;
   label: string;
-  icon: React.ComponentType<{ size?: number }>;
+  icon: LucideIcon;
   roles?: Role[]; // undefined = visible para todos autenticados
 }
 

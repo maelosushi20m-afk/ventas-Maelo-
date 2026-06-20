@@ -15,14 +15,15 @@ import {
 } from "@/lib/utils";
 import { SalesChart } from "@/components/dashboard/SalesChart";
 import {
-  TrendingUp, ShoppingBag, CheckCircle2, Clock, AlertTriangle, Activity
+  TrendingUp, ShoppingBag, CheckCircle2, Clock, AlertTriangle, Activity,
+  type LucideIcon
 } from "lucide-react";
 
 function Stat({
   label, value, icon: Icon, accent = "text-brand-gold"
 }: {
   label: string; value: string;
-  icon?: React.ComponentType<{ size?: number; className?: string }>;
+  icon?: LucideIcon;
   accent?: string;
 }) {
   return (
