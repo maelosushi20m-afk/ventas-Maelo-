@@ -103,7 +103,7 @@ export default function POSPage() {
   };
 
   return (
-    <AppShell title="Nuevo pedido" roles={["admin", "vendedor"]}>
+    <AppShell title="Nuevo pedido" roles={["SUPER_ADMIN", "TRABAJADOR"]}>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
         <div className="lg:col-span-2 card order-1 lg:order-none">
           <div className="flex gap-2 flex-wrap mb-3">

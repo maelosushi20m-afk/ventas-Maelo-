@@ -31,7 +31,7 @@ async function main() {
   await db.collection("users").doc(user.uid).set({
     email,
     name: "Administrador",
-    role: "admin",
+    role: "SUPER_ADMIN",
     activo: true,
     createdAt: FieldValue.serverTimestamp()
   });

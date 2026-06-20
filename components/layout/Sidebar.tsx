@@ -15,27 +15,47 @@ import {
   LogOut,
   Boxes,
   Menu,
-  X
+  X,
+  ScrollText,
 } from "lucide-react";
 import { useState, useEffect } from "react";
+import { Role, ROLES_LABELS } from "@/types";
 
-const NAV = [
-  { href: "/pos", label: "Nuevo pedido", icon: ShoppingCart },
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+interface NavItem {
+  href: string;
+  label: string;
+  icon: React.ComponentType<{ size?: number }>;
+  roles?: Role[]; // undefined = visible para todos autenticados
+}
+
+const NAV: NavItem[] = [
+  // TRABAJADOR + SUPER_ADMIN: crear pedidos
+  { href: "/pos", label: "Nuevo pedido", icon: ShoppingCart, roles: ["SUPER_ADMIN", "TRABAJADOR"] },
+  // SUPER_ADMIN: dashboard con ventas
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, roles: ["SUPER_ADMIN"] },
+  // Todos: ver pedidos
   { href: "/pedidos", label: "Pedidos", icon: ClipboardList },
-  { href: "/productos", label: "Productos", icon: Package },
-  { href: "/promociones", label: "Promociones", icon: Tag },
-  { href: "/inventario", label: "Inventario", icon: Boxes },
-  { href: "/clientes", label: "Clientes", icon: Users },
-  { href: "/caja", label: "Caja", icon: Wallet },
-  { href: "/reportes", label: "Reportes", icon: BarChart3 },
-  { href: "/usuarios", label: "Usuarios", icon: Shield }
+  // SUPER_ADMIN + TRABAJADOR: productos completos
+  { href: "/productos", label: "Productos", icon: Package, roles: ["SUPER_ADMIN", "TRABAJADOR"] },
+  { href: "/promociones", label: "Promociones", icon: Tag, roles: ["SUPER_ADMIN", "TRABAJADOR"] },
+  { href: "/inventario", label: "Inventario", icon: Boxes, roles: ["SUPER_ADMIN"] },
+  { href: "/clientes", label: "Clientes", icon: Users, roles: ["SUPER_ADMIN"] },
+  { href: "/caja", label: "Caja", icon: Wallet, roles: ["SUPER_ADMIN"] },
+  { href: "/reportes", label: "Reportes", icon: BarChart3, roles: ["SUPER_ADMIN"] },
+  { href: "/usuarios", label: "Usuarios", icon: Shield, roles: ["SUPER_ADMIN"] },
+  { href: "/auditoria", label: "Auditoría", icon: ScrollText, roles: ["SUPER_ADMIN"] },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
-  const { user, logout } = useAuth();
+  const { user, appUser, logout } = useAuth();
   const [open, setOpen] = useState(false);
+
+  const visibleNav = NAV.filter((n) => {
+    if (!n.roles) return true; // sin restricción
+    if (!appUser) return false;
+    return n.roles.includes(appUser.role);
+  });
 
   // Cerrar sidebar al cambiar de ruta
   useEffect(() => { setOpen(false); }, [pathname]);
@@ -52,14 +72,19 @@ export function Sidebar() {
       <div className="p-5 border-b border-brand-gray flex items-center justify-between">
         <div>
           <div className="text-xl font-bold text-brand-gold">MAELO ROLLS</div>
-          <div className="text-xs text-gray-400 mt-1 truncate">{user?.email}</div>
+          <div className="text-xs text-gray-400 mt-0.5 truncate">{appUser?.name || user?.email}</div>
+          {appUser?.role && (
+            <div className="text-[10px] mt-0.5 px-1.5 py-0.5 rounded bg-brand-red/20 text-brand-red inline-block font-medium">
+              {ROLES_LABELS[appUser.role]}
+            </div>
+          )}
         </div>
         <button className="lg:hidden p-1" onClick={() => setOpen(false)}>
           <X size={20} className="text-gray-400" />
         </button>
       </div>
       <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-        {NAV.map((n) => {
+        {visibleNav.map((n) => {
           const Icon = n.icon;
           const active = pathname?.startsWith(n.href);
           return (

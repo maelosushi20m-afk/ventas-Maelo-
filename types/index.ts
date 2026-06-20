@@ -1,6 +1,37 @@
 import { Timestamp } from "firebase/firestore";
 
-export type Role = "admin" | "vendedor" | "caja";
+export type Role = "SUPER_ADMIN" | "TRABAJADOR" | "AYUDANTE";
+
+export const ROLES_LABELS: Record<Role, string> = {
+  SUPER_ADMIN: "Super Admin",
+  TRABAJADOR: "Trabajador",
+  AYUDANTE: "Ayudante",
+};
+
+// Permisos por rol
+export const ROLE_PERMISSIONS: Record<Role, string[]> = {
+  SUPER_ADMIN: [
+    "acceso_total", "crear_usuarios", "editar_usuarios", "eliminar_usuarios",
+    "ver_ventas", "ver_reportes", "gestionar_productos", "gestionar_promociones",
+    "gestionar_inventario", "configuracion_general", "ver_auditoria",
+    "crear_pedidos", "editar_pedidos", "ver_pedidos", "cambiar_estado_pedidos",
+    "marcar_preparados", "ver_productos", "ver_stock", "ver_promociones",
+  ],
+  TRABAJADOR: [
+    "crear_pedidos", "editar_pedidos", "cambiar_estado_pedidos",
+    "ver_productos", "ver_stock", "ver_promociones", "ver_pedidos",
+  ],
+  AYUDANTE: [
+    "ver_pedidos", "marcar_preparados", "ver_productos",
+  ],
+};
+
+export function hasPermission(role: Role | null, permission: string): boolean {
+  if (!role) return false;
+  return ROLE_PERMISSIONS[role]?.includes(permission) ?? false;
+}
+
+export const SUPER_ADMIN_EMAIL = "lagaalfonso@gmail.com";
 
 export interface AppUser {
   uid: string;
@@ -9,6 +40,8 @@ export interface AppUser {
   role: Role;
   activo: boolean;
   createdAt: Timestamp | Date;
+  createdBy?: string;
+  updatedAt?: Timestamp | Date;
 }
 
 export type ProductCategory =
@@ -194,4 +227,17 @@ export interface AppNotification {
   leida: boolean;
   createdAt: Timestamp | Date;
   destinatarioRol?: Role | "todos";
+}
+
+// ── Auditoría ──────────────────────────────────────────────────
+export interface AuditLog {
+  id: string;
+  usuarioId: string;
+  usuarioEmail: string;
+  usuarioNombre: string;
+  accion: string;
+  modulo: string;
+  detalle?: string;
+  ip?: string;
+  createdAt: Timestamp | Date;
 }

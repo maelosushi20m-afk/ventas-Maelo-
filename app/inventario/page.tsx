@@ -188,7 +188,7 @@ export default function InventarioPage() {
   };
 
   return (
-    <AppShell title="Inventario" roles={["admin"]}>
+    <AppShell title="Inventario" roles={["SUPER_ADMIN"]}>
 
       {/* ── alertas banner ── */}
       {alertas.length > 0 && (

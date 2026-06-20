@@ -68,7 +68,7 @@ export default function ProductosPage() {
   };
 
   return (
-    <AppShell title="Productos" roles={["admin"]}>
+    <AppShell title="Productos" roles={["SUPER_ADMIN"]}>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
         <div className="card lg:col-span-1">
           <h3 className="font-semibold text-brand-gold mb-3">

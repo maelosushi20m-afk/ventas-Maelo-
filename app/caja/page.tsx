@@ -38,7 +38,7 @@ export default function CajaPage() {
   };
 
   return (
-    <AppShell title="Caja diaria" roles={["admin", "caja"]}>
+    <AppShell title="Caja diaria" roles={["SUPER_ADMIN"]}>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6">
         {(["Efectivo", "Transferencia", "Débito", "Crédito"] as const).map((k) => (
           <div key={k} className="card">

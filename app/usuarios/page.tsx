@@ -4,72 +4,385 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   listUsers,
   setUserActive,
-  setUserRole
+  setUserRole,
+  createUser,
+  resetUserPassword,
+  updateUserProfile,
+  logAudit,
 } from "@/lib/services/userService";
-import { Role } from "@/types";
+import { Role, ROLES_LABELS, SUPER_ADMIN_EMAIL } from "@/types";
+import { useAuth } from "@/lib/firebase/auth-context";
 import toast from "react-hot-toast";
+import { useState } from "react";
+import {
+  UserPlus,
+  KeyRound,
+  ToggleLeft,
+  ToggleRight,
+  Pencil,
+  X,
+  Check,
+  Loader2,
+} from "lucide-react";
 
-const ROLES: Role[] = ["admin", "vendedor", "caja"];
+const ASSIGNABLE_ROLES: Role[] = ["TRABAJADOR", "AYUDANTE"];
+
+interface CreateForm {
+  name: string;
+  email: string;
+  role: Role;
+  password: string;
+}
+
+interface EditForm {
+  uid: string;
+  name: string;
+  role: Role;
+}
+
+interface ResetForm {
+  uid: string;
+  name: string;
+  newPassword: string;
+}
 
 export default function UsuariosPage() {
+  const { appUser } = useAuth();
   const qc = useQueryClient();
-  const { data: users = [] } = useQuery({ queryKey: ["users"], queryFn: listUsers });
+  const { data: users = [], isLoading } = useQuery({ queryKey: ["users"], queryFn: listUsers });
 
-  const cambiarRol = async (uid: string, role: Role) => {
-    await setUserRole(uid, role);
-    toast.success("Rol actualizado");
-    qc.invalidateQueries({ queryKey: ["users"] });
+  const [showCreate, setShowCreate] = useState(false);
+  const [editForm, setEditForm] = useState<EditForm | null>(null);
+  const [resetForm, setResetForm] = useState<ResetForm | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const [createForm, setCreateForm] = useState<CreateForm>({
+    name: "", email: "", role: "TRABAJADOR", password: "",
+  });
+
+  const audit = (accion: string, detalle?: string) => {
+    if (!appUser) return;
+    logAudit({
+      usuarioId: appUser.uid,
+      usuarioEmail: appUser.email,
+      usuarioNombre: appUser.name,
+      accion,
+      modulo: "usuarios",
+      detalle,
+    });
   };
 
-  const toggle = async (uid: string, activo: boolean) => {
-    await setUserActive(uid, activo);
-    qc.invalidateQueries({ queryKey: ["users"] });
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setBusy(true);
+    try {
+      const { uid } = await createUser(createForm);
+      toast.success("Usuario creado");
+      audit("crear_usuario", `${createForm.email} - ${createForm.role}`);
+      qc.invalidateQueries({ queryKey: ["users"] });
+      setShowCreate(false);
+      setCreateForm({ name: "", email: "", role: "TRABAJADOR", password: "" });
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editForm) return;
+    setBusy(true);
+    try {
+      await updateUserProfile(editForm.uid, { name: editForm.name, role: editForm.role });
+      toast.success("Usuario actualizado");
+      audit("editar_usuario", `uid:${editForm.uid} nombre:${editForm.name} rol:${editForm.role}`);
+      qc.invalidateQueries({ queryKey: ["users"] });
+      setEditForm(null);
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleToggle = async (uid: string, email: string, activo: boolean) => {
+    if (email === SUPER_ADMIN_EMAIL) return;
+    setBusy(true);
+    try {
+      await setUserActive(uid, !activo);
+      audit(!activo ? "activar_usuario" : "desactivar_usuario", `uid:${uid}`);
+      qc.invalidateQueries({ queryKey: ["users"] });
+    } catch {
+      toast.error("Error al cambiar estado");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resetForm) return;
+    setBusy(true);
+    try {
+      await resetUserPassword(resetForm.uid, resetForm.newPassword);
+      toast.success("Contraseña restablecida");
+      audit("restablecer_contraseña", `uid:${resetForm.uid}`);
+      setResetForm(null);
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
-    <AppShell title="Usuarios" roles={["admin"]}>
-      <div className="card mb-4 text-sm text-gray-300">
-        Los usuarios se crean desde Firebase Authentication. Aquí gestionas roles y estado.
+    <AppShell title="Gestión de Usuarios" roles={["SUPER_ADMIN"]}>
+      {/* Header */}
+      <div className="flex items-center justify-between mb-4">
+        <p className="text-sm text-gray-400">Solo el Super Admin puede gestionar usuarios.</p>
+        <button
+          onClick={() => setShowCreate(true)}
+          className="btn-primary flex items-center gap-2 text-sm"
+        >
+          <UserPlus size={16} /> Nuevo usuario
+        </button>
       </div>
-      <div className="card">
-        <div className="overflow-x-auto">
-        <table className="table min-w-[400px]">
-          <thead>
-            <tr><th>Nombre</th><th>Email</th><th>Rol</th><th>Estado</th></tr>
-          </thead>
-          <tbody>
-            {users.map((u) => (
-              <tr key={u.uid}>
-                <td>{u.name || "—"}</td>
-                <td>{u.email}</td>
-                <td>
-                  <select
-                    className="input text-xs py-1"
-                    value={u.role}
-                    onChange={(e) => cambiarRol(u.uid, e.target.value as Role)}
-                  >
-                    {ROLES.map((r) => <option key={r}>{r}</option>)}
-                  </select>
-                </td>
-                <td>
-                  <label className="flex items-center gap-2 text-sm">
-                    <input
-                      type="checkbox"
-                      checked={u.activo}
-                      onChange={(e) => toggle(u.uid, e.target.checked)}
-                    />
-                    Activo
-                  </label>
-                </td>
+
+      {/* Tabla */}
+      <div className="card overflow-x-auto">
+        {isLoading ? (
+          <div className="flex justify-center py-8">
+            <Loader2 size={24} className="animate-spin text-brand-gold" />
+          </div>
+        ) : (
+          <table className="table min-w-[600px]">
+            <thead>
+              <tr>
+                <th>Nombre</th>
+                <th>Email</th>
+                <th>Rol</th>
+                <th>Estado</th>
+                <th>Acciones</th>
               </tr>
-            ))}
-            {users.length === 0 && (
-              <tr><td colSpan={4} className="text-center text-gray-400 py-4">Sin usuarios</td></tr>
-            )}
-          </tbody>
-        </table>
-        </div>
+            </thead>
+            <tbody>
+              {users.map((u) => {
+                const isSuperAdmin = u.email === SUPER_ADMIN_EMAIL;
+                return (
+                  <tr key={u.uid}>
+                    <td className="font-medium">{u.name || "—"}</td>
+                    <td className="text-sm text-gray-300">{u.email}</td>
+                    <td>
+                      <span className={`badge text-xs ${
+                        u.role === "SUPER_ADMIN"
+                          ? "bg-brand-gold/20 text-brand-gold"
+                          : u.role === "TRABAJADOR"
+                          ? "bg-blue-500/20 text-blue-400"
+                          : "bg-gray-500/20 text-gray-400"
+                      }`}>
+                        {ROLES_LABELS[u.role] || u.role}
+                      </span>
+                    </td>
+                    <td>
+                      <button
+                        disabled={isSuperAdmin || busy}
+                        onClick={() => handleToggle(u.uid, u.email, u.activo)}
+                        className={`flex items-center gap-1.5 text-sm transition-colors ${
+                          u.activo ? "text-green-400 hover:text-green-300" : "text-gray-500 hover:text-gray-400"
+                        } disabled:opacity-50 disabled:cursor-not-allowed`}
+                      >
+                        {u.activo ? <ToggleRight size={18} /> : <ToggleLeft size={18} />}
+                        {u.activo ? "Activo" : "Inactivo"}
+                      </button>
+                    </td>
+                    <td>
+                      {!isSuperAdmin && (
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => setEditForm({ uid: u.uid, name: u.name, role: u.role })}
+                            title="Editar"
+                            className="p-1.5 rounded hover:bg-brand-gray text-gray-400 hover:text-white transition-colors"
+                          >
+                            <Pencil size={14} />
+                          </button>
+                          <button
+                            onClick={() => setResetForm({ uid: u.uid, name: u.name, newPassword: "" })}
+                            title="Restablecer contraseña"
+                            className="p-1.5 rounded hover:bg-brand-gray text-gray-400 hover:text-yellow-400 transition-colors"
+                          >
+                            <KeyRound size={14} />
+                          </button>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+              {users.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="text-center text-gray-400 py-6">Sin usuarios</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        )}
       </div>
+
+      {/* Modal: Crear usuario */}
+      {showCreate && (
+        <Modal title="Nuevo usuario" onClose={() => setShowCreate(false)}>
+          <form onSubmit={handleCreate} className="space-y-4">
+            <Field label="Nombre completo">
+              <input
+                className="input"
+                required
+                placeholder="Ej: María González"
+                value={createForm.name}
+                onChange={(e) => setCreateForm((p) => ({ ...p, name: e.target.value }))}
+              />
+            </Field>
+            <Field label="Email">
+              <input
+                className="input"
+                type="email"
+                required
+                placeholder="usuario@email.com"
+                value={createForm.email}
+                onChange={(e) => setCreateForm((p) => ({ ...p, email: e.target.value }))}
+              />
+            </Field>
+            <Field label="Rol">
+              <select
+                className="input"
+                value={createForm.role}
+                onChange={(e) => setCreateForm((p) => ({ ...p, role: e.target.value as Role }))}
+              >
+                {ASSIGNABLE_ROLES.map((r) => (
+                  <option key={r} value={r}>{ROLES_LABELS[r]}</option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Contraseña inicial">
+              <input
+                className="input"
+                type="password"
+                required
+                minLength={6}
+                placeholder="Mínimo 6 caracteres"
+                value={createForm.password}
+                onChange={(e) => setCreateForm((p) => ({ ...p, password: e.target.value }))}
+              />
+            </Field>
+            <div className="flex gap-2 pt-2">
+              <button type="submit" disabled={busy} className="btn-primary flex-1 flex items-center justify-center gap-2">
+                {busy ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
+                Crear usuario
+              </button>
+              <button type="button" onClick={() => setShowCreate(false)} className="btn-ghost flex-1">
+                Cancelar
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {/* Modal: Editar usuario */}
+      {editForm && (
+        <Modal title="Editar usuario" onClose={() => setEditForm(null)}>
+          <form onSubmit={handleEdit} className="space-y-4">
+            <Field label="Nombre completo">
+              <input
+                className="input"
+                required
+                value={editForm.name}
+                onChange={(e) => setEditForm((p) => p ? { ...p, name: e.target.value } : p)}
+              />
+            </Field>
+            <Field label="Rol">
+              <select
+                className="input"
+                value={editForm.role}
+                onChange={(e) => setEditForm((p) => p ? { ...p, role: e.target.value as Role } : p)}
+              >
+                {ASSIGNABLE_ROLES.map((r) => (
+                  <option key={r} value={r}>{ROLES_LABELS[r]}</option>
+                ))}
+              </select>
+            </Field>
+            <div className="flex gap-2 pt-2">
+              <button type="submit" disabled={busy} className="btn-primary flex-1 flex items-center justify-center gap-2">
+                {busy ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
+                Guardar
+              </button>
+              <button type="button" onClick={() => setEditForm(null)} className="btn-ghost flex-1">
+                Cancelar
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {/* Modal: Restablecer contraseña */}
+      {resetForm && (
+        <Modal title={`Restablecer contraseña — ${resetForm.name}`} onClose={() => setResetForm(null)}>
+          <form onSubmit={handleReset} className="space-y-4">
+            <Field label="Nueva contraseña">
+              <input
+                className="input"
+                type="password"
+                required
+                minLength={6}
+                placeholder="Mínimo 6 caracteres"
+                value={resetForm.newPassword}
+                onChange={(e) => setResetForm((p) => p ? { ...p, newPassword: e.target.value } : p)}
+              />
+            </Field>
+            <div className="flex gap-2 pt-2">
+              <button type="submit" disabled={busy} className="btn-primary flex-1 flex items-center justify-center gap-2">
+                {busy ? <Loader2 size={16} className="animate-spin" /> : <KeyRound size={16} />}
+                Restablecer
+              </button>
+              <button type="button" onClick={() => setResetForm(null)} className="btn-ghost flex-1">
+                Cancelar
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
     </AppShell>
+  );
+}
+
+// ── Sub-componentes ──────────────────────────────────────────────
+
+function Modal({ title, children, onClose }: {
+  title: string;
+  children: React.ReactNode;
+  onClose: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+      <div className="bg-brand-dark border border-brand-gray rounded-xl w-full max-w-md shadow-2xl">
+        <div className="flex items-center justify-between p-5 border-b border-brand-gray">
+          <h2 className="font-semibold text-brand-gold">{title}</h2>
+          <button onClick={onClose} className="p-1 hover:bg-brand-gray rounded">
+            <X size={18} className="text-gray-400" />
+          </button>
+        </div>
+        <div className="p-5">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <label className="block text-xs text-gray-400 mb-1.5 font-medium uppercase tracking-wide">
+        {label}
+      </label>
+      {children}
+    </div>
   );
 }
