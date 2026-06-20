@@ -6,10 +6,12 @@ service cloud.firestore {
     function isSignedIn() {
       return request.auth != null;
     }
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
     function role() {
       // El rol está guardado en el documento users/{uid}.role
-      // Se lee desde el token custom claim si existe, si no desde Firestore
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+      return userDoc().role;
     }
     function isSuperAdmin() {
       return isSignedIn() && role() == "SUPER_ADMIN";
@@ -21,7 +23,7 @@ service cloud.firestore {
       return isSignedIn() && (role() == "AYUDANTE" || role() == "TRABAJADOR" || role() == "SUPER_ADMIN");
     }
     function isActive() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.activo == true;
+      return userDoc().activo == true;
     }
     function canAccess() {
       return isSignedIn() && isActive();
@@ -32,6 +34,12 @@ service cloud.firestore {
     match /users/{userId} {
       allow read: if canAccess() && (request.auth.uid == userId || isSuperAdmin());
       allow write: if isSuperAdmin();
+    }
+
+    // ── Contador de folios (necesario para crear pedidos) ────────
+    match /counters/{counterId} {
+      allow read: if canAccess();
+      allow write: if canAccess() && isTrabajador();
     }
 
     // ── Pedidos ──────────────────────────────────────────────────
@@ -95,6 +103,11 @@ service cloud.firestore {
       allow read: if isSuperAdmin();
       allow create: if canAccess(); // cualquier usuario autenticado puede crear logs
       allow update, delete: if false; // inmutable
+    }
+
+    // ── Cierre: cualquier otra colección queda denegada ──────────
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }

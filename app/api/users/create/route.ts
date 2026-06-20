@@ -3,6 +3,9 @@ import { adminAuth, adminDb } from "@/lib/firebase/admin";
 import { Role, SUPER_ADMIN_EMAIL } from "@/types";
 import { FieldValue } from "firebase-admin/firestore";
 
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
 export async function POST(req: Request) {
   try {
     const { email, name, role, password } = await req.json() as {
