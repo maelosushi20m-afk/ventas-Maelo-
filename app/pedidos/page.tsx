@@ -7,28 +7,8 @@ import { ORDER_STATUSES, Order, OrderStatus, PAYMENT_METHODS, PaymentMethod } fr
 import { formatCLP, toDate, toActor } from "@/lib/utils";
 import { useAuth } from "@/lib/firebase/auth-context";
 import toast from "react-hot-toast";
-import { Search, Printer, Volume2, VolumeX } from "lucide-react";
+import { Search, Printer } from "lucide-react";
 import Link from "next/link";
-
-const SOUND_KEY = "maelo-sonido-pedidos";
-
-// Pitido corto vía Web Audio (sin archivos externos).
-function playBeep() {
-  try {
-    const Ctx = window.AudioContext || (window as any).webkitAudioContext;
-    if (!Ctx) return;
-    const ctx = new Ctx();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain); gain.connect(ctx.destination);
-    osc.type = "sine"; osc.frequency.value = 880;
-    gain.gain.setValueAtTime(0.001, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.3, ctx.currentTime + 0.02);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
-    osc.start(); osc.stop(ctx.currentTime + 0.36);
-    osc.onended = () => ctx.close();
-  } catch { /* sin audio disponible */ }
-}
 
 const colorEstado: Record<OrderStatus, string> = {
   "Pendiente": "bg-yellow-700",
@@ -47,21 +27,8 @@ export default function PedidosPage() {
   const [filterEstado, setFilterEstado] = useState<OrderStatus | "">("");
   const [filterPago, setFilterPago] = useState<PaymentMethod | "">("");
   const [selected, setSelected] = useState<Order | null>(null);
-  const [sonido, setSonido] = useState(false);
   const [nuevos, setNuevos] = useState<Set<string>>(new Set());
   const knownIds = useRef<Set<string> | null>(null);
-
-  useEffect(() => {
-    setSonido(localStorage.getItem(SOUND_KEY) === "1");
-  }, []);
-  const toggleSonido = () => {
-    setSonido((v) => {
-      const nv = !v;
-      localStorage.setItem(SOUND_KEY, nv ? "1" : "0");
-      if (nv) playBeep(); // confirma audio + desbloquea AudioContext por gesto
-      return nv;
-    });
-  };
 
   // Auto-actualización cada 60s. refetchInterval no desmonta la lista,
   // así que se conservan filtros, scroll, modal y ediciones en curso.
@@ -88,13 +55,12 @@ export default function PedidosPage() {
     const recienLlegados = ids.filter((id) => !knownIds.current!.has(id));
     knownIds.current = new Set(ids); // siempre actualizamos el set conocido
     if (recienLlegados.length > 0) {
+      // El sonido/voz lo gestiona OrderSoundWatcher de forma global.
       setNuevos(new Set(recienLlegados));
-      toast.success(`${recienLlegados.length} pedido(s) nuevo(s)`);
-      if (sonido) playBeep();
       const t = setTimeout(() => setNuevos(new Set()), 8000); // quitar resaltado
       return () => clearTimeout(t);
     }
-  }, [latest, sonido]);
+  }, [latest]);
 
   const base = term ? result : latest;
   const orders = base.filter((o: any) =>
@@ -121,20 +87,10 @@ export default function PedidosPage() {
           <option value="">Todos los estados</option>
           {ORDER_STATUSES.map((s) => <option key={s}>{s}</option>)}
         </select>
-        <div className="flex gap-2">
-          <select className="input" value={filterPago} onChange={(e) => setFilterPago(e.target.value as any)}>
-            <option value="">Todos los pagos</option>
-            {PAYMENT_METHODS.map((m) => <option key={m}>{m}</option>)}
-          </select>
-          <button
-            type="button"
-            onClick={toggleSonido}
-            title={sonido ? "Sonido activado" : "Sonido desactivado"}
-            className={`btn-ghost shrink-0 px-3 ${sonido ? "text-brand-gold border-brand-gold/40" : "text-gray-400"}`}
-          >
-            {sonido ? <Volume2 size={18} /> : <VolumeX size={18} />}
-          </button>
-        </div>
+        <select className="input" value={filterPago} onChange={(e) => setFilterPago(e.target.value as any)}>
+          <option value="">Todos los pagos</option>
+          {PAYMENT_METHODS.map((m) => <option key={m}>{m}</option>)}
+        </select>
       </div>
       <p className="text-[11px] text-gray-500 -mt-2 mb-3">Actualización automática cada 60 s · los pedidos nuevos se resaltan.</p>
 
@@ -196,8 +152,8 @@ export default function PedidosPage() {
       </div>
 
       {selected && (
-        <div className="fixed inset-0 bg-black/70 flex items-end sm:items-center justify-center sm:p-4 z-50" onClick={() => setSelected(null)}>
-          <div className="card max-w-lg w-full rounded-b-none sm:rounded-b-xl max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/70 flex items-end sm:items-center justify-center sm:p-4 z-[60]" onClick={() => setSelected(null)}>
+          <div className="card max-w-lg w-full rounded-b-none sm:rounded-b-xl max-h-[85vh] overflow-y-auto pb-[max(1rem,env(safe-area-inset-bottom))]" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-lg font-bold text-brand-gold mb-2">Pedido #{selected.numeroPedido}</h3>
             <div className="text-sm space-y-1 mb-3">
               <div><b>Cliente:</b> {selected.clienteNombre}</div>

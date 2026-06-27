@@ -38,11 +38,20 @@ body {
   font-family: var(--font-inter), Inter, system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
-  /* iOS notch / safe-area */
-  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  /* iOS notch / safe-area: solo laterales aquí.
+     El inset superior/inferior lo aplican el header sticky y el drawer,
+     para evitar doble padding y que el contenido quede bajo el notch. */
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
   -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
   overscroll-behavior-y: none;
+  /* Evita rebote elástico que descoloca elementos fixed en iOS PWA. */
+  min-height: 100dvh;
 }
+
+/* Toques fiables en iOS: el delay/ghost-click rompe taps en standalone. */
+button, a, [role="button"], select, input { touch-action: manipulation; }
 
 /* ── Scrollbar refinada ─────────────────────────────────── */
 * { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }

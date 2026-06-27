@@ -14,12 +14,12 @@ import {
   Shield,
   LogOut,
   Boxes,
-  Menu,
   X,
   ScrollText,
+  Settings,
   type LucideIcon,
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { Role, ROLES_LABELS } from "@/types";
 
 interface NavItem {
@@ -45,25 +45,32 @@ const NAV: NavItem[] = [
   { href: "/reportes", label: "Reportes", icon: BarChart3, roles: ["SUPER_ADMIN"] },
   { href: "/usuarios", label: "Usuarios", icon: Shield, roles: ["SUPER_ADMIN"] },
   { href: "/auditoria", label: "Historial de Actividad", icon: ScrollText },
+  { href: "/configuracion", label: "Configuración", icon: Settings },
 ];
 
-export function Sidebar() {
+export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
   const pathname = usePathname();
   const { user, appUser, logout } = useAuth();
-  const [open, setOpen] = useState(false);
 
   // Roles desactivados: todos los módulos visibles para cualquier usuario autenticado.
   const visibleNav = NAV;
 
   // Cerrar sidebar al cambiar de ruta
-  useEffect(() => { setOpen(false); }, [pathname]);
+  useEffect(() => { onClose(); }, [pathname]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Cerrar sidebar con Escape
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, []);
+  }, [onClose]);
+
+  // Bloquear scroll del body mientras el drawer está abierto (iOS).
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    document.body.style.overflow = open ? "hidden" : "";
+    return () => { document.body.style.overflow = ""; };
+  }, [open]);
 
   const navContent = (
     <>
@@ -77,7 +84,7 @@ export function Sidebar() {
             </div>
           )}
         </div>
-        <button className="lg:hidden p-1" onClick={() => setOpen(false)}>
+        <button className="lg:hidden p-2 -mr-1 active:bg-brand-gray rounded-lg touch-manipulation" onClick={onClose} aria-label="Cerrar menú">
           <X size={20} className="text-gray-400" />
         </button>
       </div>
@@ -109,26 +116,20 @@ export function Sidebar() {
 
   return (
     <>
-      {/* Botón hamburguesa — visible solo en móvil/tablet */}
-      <button
-        className="lg:hidden fixed top-3 left-3 z-50 p-2 bg-brand-dark border border-brand-gray rounded-lg"
-        onClick={() => setOpen(true)}
-        aria-label="Abrir menú"
-      >
-        <Menu size={20} className="text-brand-gold" />
-      </button>
+      {/* Overlay móvil/tablet. pointer-events solo cuando abierto. */}
+      <div
+        onClick={onClose}
+        aria-hidden="true"
+        className={`lg:hidden fixed inset-0 bg-black/60 z-40 transition-opacity duration-200 ${
+          open ? "opacity-100" : "opacity-0 pointer-events-none"
+        }`}
+      />
 
-      {/* Overlay móvil/tablet */}
-      {open && (
-        <div
-          className="lg:hidden fixed inset-0 bg-black/60 z-40"
-          onClick={() => setOpen(false)}
-        />
-      )}
-
-      {/* Sidebar móvil/tablet — drawer */}
+      {/* Sidebar móvil/tablet — drawer. Siempre montado; se desliza con transform.
+          z-50 por encima del overlay y del header sticky (z-30).
+          Safe-area en padding superior para el notch de iOS. */}
       <aside
-        className={`lg:hidden fixed top-0 left-0 h-full w-64 bg-brand-dark border-r border-brand-gray flex flex-col z-50 transform transition-transform duration-200 ${
+        className={`lg:hidden fixed top-0 left-0 h-[100dvh] w-64 max-w-[85vw] bg-brand-dark border-r border-brand-gray flex flex-col z-50 transform transition-transform duration-200 will-change-transform pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] ${
           open ? "translate-x-0" : "-translate-x-full"
         }`}
       >
