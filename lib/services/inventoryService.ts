@@ -83,6 +83,19 @@ export async function deleteInventoryItem(id: string, actor?: AuditActor) {
 
 // ── Movimientos ────────────────────────────────────────────────
 
+const isOnline = () =>
+  typeof navigator === "undefined" ? true : navigator.onLine !== false;
+
+/** Calcula el stock resultante según el tipo de movimiento. */
+function calcStock(tipo: MovementType, stockAnterior: number, cantidad: number): number {
+  if (tipo === "entrada") return stockAnterior + cantidad;
+  if (tipo === "salida") {
+    if (cantidad > stockAnterior) throw new Error("Stock insuficiente");
+    return stockAnterior - cantidad;
+  }
+  return cantidad; // ajuste: nuevo stock absoluto
+}
+
 export async function registrarMovimiento(input: {
   itemId: string;
   tipo: MovementType;
@@ -94,42 +107,46 @@ export async function registrarMovimiento(input: {
 }): Promise<{ stockResultante: number }> {
   const itemRef = doc(db, "inventory", input.itemId);
 
-  const result = await runTransaction(db, async (tx) => {
-    const snap = await tx.get(itemRef);
-    if (!snap.exists()) throw new Error("Ítem no encontrado");
+  const buildMov = (item: InventoryItem, stockAnterior: number, stockResultante: number) => ({
+    itemId: input.itemId,
+    itemNombre: item.nombre,
+    tipo: input.tipo,
+    cantidad: input.tipo === "ajuste" ? Math.abs(stockResultante - stockAnterior) : input.cantidad,
+    stockAnterior,
+    stockResultante,
+    motivo: input.motivo || "",
+    usuarioId: input.usuarioId || null,
+    usuarioNombre: input.usuarioNombre || null,
+    createdAt: serverTimestamp(),
+  });
 
+  let result: { stockResultante: number; stockAnterior: number; itemNombre: string };
+
+  if (isOnline()) {
+    // Online: transacción atómica (a prueba de concurrencia entre cajas).
+    result = await runTransaction(db, async (tx) => {
+      const snap = await tx.get(itemRef);
+      if (!snap.exists()) throw new Error("Ítem no encontrado");
+      const item = snap.data() as InventoryItem;
+      const stockAnterior = item.stockActual ?? 0;
+      const stockResultante = calcStock(input.tipo, stockAnterior, input.cantidad);
+      tx.update(itemRef, { stockActual: stockResultante, updatedAt: serverTimestamp() });
+      await addDoc(movCol(), buildMov(item, stockAnterior, stockResultante));
+      return { stockResultante, stockAnterior, itemNombre: item.nombre };
+    });
+  } else {
+    // Offline: lectura desde caché local + escritura optimista.
+    // Las transacciones no operan sin conexión; los writes se sincronizan
+    // automáticamente al reconectar (Firestore offline).
+    const snap = await getDoc(itemRef);
+    if (!snap.exists()) throw new Error("Ítem no encontrado (sin conexión)");
     const item = snap.data() as InventoryItem;
     const stockAnterior = item.stockActual ?? 0;
-    let stockResultante: number;
-
-    if (input.tipo === "entrada") {
-      stockResultante = stockAnterior + input.cantidad;
-    } else if (input.tipo === "salida") {
-      if (input.cantidad > stockAnterior) throw new Error("Stock insuficiente");
-      stockResultante = stockAnterior - input.cantidad;
-    } else {
-      // ajuste: la cantidad es el nuevo stock absoluto
-      stockResultante = input.cantidad;
-    }
-
-    tx.update(itemRef, { stockActual: stockResultante, updatedAt: serverTimestamp() });
-
-    const movData = {
-      itemId: input.itemId,
-      itemNombre: item.nombre,
-      tipo: input.tipo,
-      cantidad: input.tipo === "ajuste" ? Math.abs(stockResultante - stockAnterior) : input.cantidad,
-      stockAnterior,
-      stockResultante,
-      motivo: input.motivo || "",
-      usuarioId: input.usuarioId || null,
-      usuarioNombre: input.usuarioNombre || null,
-      createdAt: serverTimestamp()
-    };
-
-    await addDoc(movCol(), movData);
-    return { stockResultante, stockAnterior, itemNombre: item.nombre };
-  });
+    const stockResultante = calcStock(input.tipo, stockAnterior, input.cantidad);
+    void updateDoc(itemRef, { stockActual: stockResultante, updatedAt: serverTimestamp() });
+    void addDoc(movCol(), buildMov(item, stockAnterior, stockResultante));
+    result = { stockResultante, stockAnterior, itemNombre: item.nombre };
+  }
 
   // Auditoría fuera de la transacción
   const accionMap: Record<MovementType, string> = {

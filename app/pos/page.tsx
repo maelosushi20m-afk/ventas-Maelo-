@@ -75,7 +75,11 @@ export default function POSPage() {
         items, total: totalValue, metodoPago,
         vendedorId: appUser?.uid, vendedorNombre: appUser?.name
       }, appUser ? { uid: appUser.uid, email: appUser.email, name: appUser.name } : undefined);
-      toast.success(`Pedido #${r.numeroPedido} creado`);
+      toast.success(
+        r.pendienteNumero
+          ? `Pedido guardado offline (${r.folioVisible}) — se sincronizará al volver la conexión`
+          : `Pedido ${r.folioVisible} creado`
+      );
       clear();
       setClienteQuery("");
     } catch (e: any) { toast.error(e.message); }

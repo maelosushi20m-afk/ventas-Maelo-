@@ -1,14 +1,34 @@
 "use client";
 import { AppShell } from "@/components/layout/AppShell";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { listLatestOrders, searchOrders, updateOrderStatus } from "@/lib/services/orderService";
 import { ORDER_STATUSES, Order, OrderStatus, PAYMENT_METHODS, PaymentMethod } from "@/types";
 import { formatCLP, toDate, toActor } from "@/lib/utils";
 import { useAuth } from "@/lib/firebase/auth-context";
 import toast from "react-hot-toast";
-import { Search, Printer } from "lucide-react";
+import { Search, Printer, Volume2, VolumeX } from "lucide-react";
 import Link from "next/link";
+
+const SOUND_KEY = "maelo-sonido-pedidos";
+
+// Pitido corto vía Web Audio (sin archivos externos).
+function playBeep() {
+  try {
+    const Ctx = window.AudioContext || (window as any).webkitAudioContext;
+    if (!Ctx) return;
+    const ctx = new Ctx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.type = "sine"; osc.frequency.value = 880;
+    gain.gain.setValueAtTime(0.001, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.3, ctx.currentTime + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
+    osc.start(); osc.stop(ctx.currentTime + 0.36);
+    osc.onended = () => ctx.close();
+  } catch { /* sin audio disponible */ }
+}
 
 const colorEstado: Record<OrderStatus, string> = {
   "Pendiente": "bg-yellow-700",
@@ -27,13 +47,54 @@ export default function PedidosPage() {
   const [filterEstado, setFilterEstado] = useState<OrderStatus | "">("");
   const [filterPago, setFilterPago] = useState<PaymentMethod | "">("");
   const [selected, setSelected] = useState<Order | null>(null);
+  const [sonido, setSonido] = useState(false);
+  const [nuevos, setNuevos] = useState<Set<string>>(new Set());
+  const knownIds = useRef<Set<string> | null>(null);
 
-  const { data: latest = [] } = useQuery({ queryKey: ["orders", "latest", 50], queryFn: () => listLatestOrders(50) });
+  useEffect(() => {
+    setSonido(localStorage.getItem(SOUND_KEY) === "1");
+  }, []);
+  const toggleSonido = () => {
+    setSonido((v) => {
+      const nv = !v;
+      localStorage.setItem(SOUND_KEY, nv ? "1" : "0");
+      if (nv) playBeep(); // confirma audio + desbloquea AudioContext por gesto
+      return nv;
+    });
+  };
+
+  // Auto-actualización cada 60s. refetchInterval no desmonta la lista,
+  // así que se conservan filtros, scroll, modal y ediciones en curso.
+  const { data: latest = [] } = useQuery({
+    queryKey: ["orders", "latest", 50],
+    queryFn: () => listLatestOrders(50),
+    refetchInterval: 60_000,
+    refetchIntervalInBackground: false,
+  });
   const { data: result = [] } = useQuery({
     queryKey: ["orders", "search", term],
     queryFn: () => (term ? searchOrders(term) : Promise.resolve([])),
-    enabled: !!term
+    enabled: !!term,
+    refetchInterval: term ? 60_000 : false,
   });
+
+  // Detecta pedidos nuevos entre refrescos (sobre la lista base, sin filtros).
+  useEffect(() => {
+    const ids = latest.map((o: any) => o.id);
+    if (knownIds.current === null) {
+      knownIds.current = new Set(ids); // primera carga: no marcar nada
+      return;
+    }
+    const recienLlegados = ids.filter((id) => !knownIds.current!.has(id));
+    knownIds.current = new Set(ids); // siempre actualizamos el set conocido
+    if (recienLlegados.length > 0) {
+      setNuevos(new Set(recienLlegados));
+      toast.success(`${recienLlegados.length} pedido(s) nuevo(s)`);
+      if (sonido) playBeep();
+      const t = setTimeout(() => setNuevos(new Set()), 8000); // quitar resaltado
+      return () => clearTimeout(t);
+    }
+  }, [latest, sonido]);
 
   const base = term ? result : latest;
   const orders = base.filter((o: any) =>
@@ -60,11 +121,22 @@ export default function PedidosPage() {
           <option value="">Todos los estados</option>
           {ORDER_STATUSES.map((s) => <option key={s}>{s}</option>)}
         </select>
-        <select className="input" value={filterPago} onChange={(e) => setFilterPago(e.target.value as any)}>
-          <option value="">Todos los pagos</option>
-          {PAYMENT_METHODS.map((m) => <option key={m}>{m}</option>)}
-        </select>
+        <div className="flex gap-2">
+          <select className="input" value={filterPago} onChange={(e) => setFilterPago(e.target.value as any)}>
+            <option value="">Todos los pagos</option>
+            {PAYMENT_METHODS.map((m) => <option key={m}>{m}</option>)}
+          </select>
+          <button
+            type="button"
+            onClick={toggleSonido}
+            title={sonido ? "Sonido activado" : "Sonido desactivado"}
+            className={`btn-ghost shrink-0 px-3 ${sonido ? "text-brand-gold border-brand-gold/40" : "text-gray-400"}`}
+          >
+            {sonido ? <Volume2 size={18} /> : <VolumeX size={18} />}
+          </button>
+        </div>
       </div>
+      <p className="text-[11px] text-gray-500 -mt-2 mb-3">Actualización automática cada 60 s · los pedidos nuevos se resaltan.</p>
 
       {/* Vista cards en móvil, tabla en desktop */}
       <div className="card hidden md:block">
@@ -75,8 +147,11 @@ export default function PedidosPage() {
             </thead>
             <tbody>
               {orders.map((o: any) => (
-                <tr key={o.id} className="hover:bg-brand-gray cursor-pointer" onClick={() => setSelected(o)}>
-                  <td className="font-mono">#{o.numeroPedido}</td>
+                <tr key={o.id} className={`cursor-pointer transition-colors ${nuevos.has(o.id) ? "bg-brand-gold/15 animate-fade-up" : "hover:bg-brand-gray"}`} onClick={() => setSelected(o)}>
+                  <td className="font-mono">
+                    {o.pendienteNumero ? <span className="text-amber-400" title="Creado offline, pendiente de número">L·{String(o.createdLocal || "").slice(-4)}</span> : `#${o.numeroPedido}`}
+                    {nuevos.has(o.id) && <span className="ml-1 badge badge-gold !py-0">nuevo</span>}
+                  </td>
                   <td className="truncate max-w-[120px]">{o.clienteNombre}</td>
                   <td>{o.telefono}</td>
                   <td>{formatCLP(o.total)}</td>
@@ -98,9 +173,12 @@ export default function PedidosPage() {
       {/* Vista cards para móvil */}
       <div className="md:hidden space-y-2">
         {orders.map((o: any) => (
-          <div key={o.id} className="card cursor-pointer active:bg-brand-gray" onClick={() => setSelected(o)}>
+          <div key={o.id} className={`card cursor-pointer active:bg-brand-gray transition-colors ${nuevos.has(o.id) ? "ring-1 ring-brand-gold animate-fade-up" : ""}`} onClick={() => setSelected(o)}>
             <div className="flex justify-between items-start mb-1">
-              <span className="font-mono font-bold">#{o.numeroPedido}</span>
+              <span className="font-mono font-bold">
+                {o.pendienteNumero ? <span className="text-amber-400">L·{String(o.createdLocal || "").slice(-4)}</span> : `#${o.numeroPedido}`}
+                {nuevos.has(o.id) && <span className="ml-1 badge badge-gold !py-0">nuevo</span>}
+              </span>
               <span className={`badge ${colorEstado[o.estado as OrderStatus]}`}>{o.estado}</span>
             </div>
             <div className="text-sm">{o.clienteNombre}</div>

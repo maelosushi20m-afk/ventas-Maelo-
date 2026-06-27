@@ -1,6 +1,12 @@
 import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
 import { getAuth, Auth } from "firebase/auth";
-import { getFirestore, Firestore } from "firebase/firestore";
+import {
+  getFirestore,
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
+  Firestore,
+} from "firebase/firestore";
 import { getStorage, FirebaseStorage } from "firebase/storage";
 
 const firebaseConfig = {
@@ -23,7 +29,29 @@ const app: FirebaseApp = isBrowser
   : ({} as FirebaseApp);
 
 export const auth: Auth = isBrowser ? getAuth(app) : ({} as Auth);
-export const db: Firestore = isBrowser ? getFirestore(app) : ({} as Firestore);
+
+/**
+ * Firestore con persistencia offline (Offline First).
+ * persistentLocalCache = caché en IndexedDB: lecturas y escrituras siguen
+ * funcionando sin conexión y se sincronizan solas al reconectar.
+ * persistentMultipleTabManager = soporte multi-pestaña sin conflictos.
+ * Si IndexedDB falla (modo incógnito, navegador viejo) caemos a memoria.
+ */
+function initDb(): Firestore {
+  if (!isBrowser) return {} as Firestore;
+  try {
+    return initializeFirestore(app, {
+      localCache: persistentLocalCache({
+        tabManager: persistentMultipleTabManager(),
+      }),
+    });
+  } catch {
+    // Ya inicializado o IndexedDB no disponible → cliente estándar.
+    return getFirestore(app);
+  }
+}
+
+export const db: Firestore = initDb();
 export const storage: FirebaseStorage = isBrowser ? getStorage(app) : ({} as FirebaseStorage);
 export default app;
 

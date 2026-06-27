@@ -137,6 +137,8 @@ export const PAYMENT_METHODS: PaymentMethod[] = [
 export interface Order extends SoftDeletable {
   id: string;
   numeroPedido: number;
+  pendienteNumero?: boolean;   // creado offline; número correlativo aún sin asignar
+  createdLocal?: number;       // epoch local de creación (orden cronológico offline)
   fecha: Timestamp | Date;
   clienteId?: string;
   clienteNombre: string;

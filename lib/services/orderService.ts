@@ -20,6 +20,13 @@ import { audit } from "./auditService";
 
 const col = () => collection(db, "orders");
 
+const isOnline = () =>
+  typeof navigator === "undefined" ? true : navigator.onLine !== false;
+
+/**
+ * Asigna el siguiente número correlativo de forma atómica en el servidor.
+ * Requiere conexión (las transacciones de Firestore no operan offline).
+ */
 async function nextOrderNumber(): Promise<number> {
   const ref = doc(db, "counters", "orderNumber");
   return runTransaction(db, async (tx) => {
@@ -29,6 +36,39 @@ async function nextOrderNumber(): Promise<number> {
     tx.set(ref, { seq: next });
     return next;
   });
+}
+
+/**
+ * Reconcilia los pedidos creados offline (pendienteNumero === true):
+ * les asigna un número correlativo real del servidor. Idempotente y seguro
+ * ante reintentos — solo toca pedidos que aún no tienen número definitivo.
+ * Llamar al recuperar la conexión.
+ */
+export async function reconcileOrderNumbers(): Promise<number> {
+  if (!isOnline()) return 0;
+  let asignados = 0;
+  const snap = await getDocs(query(col(), where("pendienteNumero", "==", true)));
+  // Orden cronológico por creación local para respetar el orden real de venta.
+  const pendientes = snap.docs.sort((a, b) => {
+    const ta = (a.data().createdLocal as number) || 0;
+    const tb = (b.data().createdLocal as number) || 0;
+    return ta - tb;
+  });
+  for (const d of pendientes) {
+    try {
+      const numeroPedido = await nextOrderNumber();
+      await updateDoc(doc(db, "orders", d.id), {
+        numeroPedido,
+        pendienteNumero: false,
+        updatedAt: serverTimestamp(),
+      });
+      asignados++;
+    } catch {
+      // Si falla uno, seguimos con el resto; se reintenta en la próxima sync.
+      break;
+    }
+  }
+  return asignados;
 }
 
 export interface CreateOrderInput {
@@ -45,15 +85,36 @@ export interface CreateOrderInput {
 }
 
 export async function createOrder(input: CreateOrderInput, actor?: AuditActor) {
-  const numeroPedido = await nextOrderNumber();
+  const online = isOnline();
+
+  // Número correlativo: online se obtiene del servidor (atómico).
+  // Offline se marca pendiente y se asigna al reconectar (reconcileOrderNumbers).
+  let numeroPedido = 0;
+  let pendienteNumero = false;
+  if (online) {
+    try {
+      numeroPedido = await nextOrderNumber();
+    } catch {
+      pendienteNumero = true; // por si la red cae justo en este punto
+    }
+  } else {
+    pendienteNumero = true;
+  }
+
   const clienteId = await upsertCustomerFromOrder({
     nombre: input.clienteNombre,
     telefono: input.telefono,
     direccion: input.direccion,
     total: input.total
   });
+
+  const folioVisible = pendienteNumero ? `L-${Date.now()}` : `#${numeroPedido}`;
+
+  // addDoc offline resuelve contra la caché local de inmediato (no bloquea).
   const ref = await addDoc(col(), {
     numeroPedido,
+    pendienteNumero,
+    createdLocal: Date.now(), // orden cronológico real para la reconciliación
     fecha: serverTimestamp(),
     clienteId: clienteId || null,
     clienteNombre: input.clienteNombre,
@@ -72,7 +133,7 @@ export async function createOrder(input: CreateOrderInput, actor?: AuditActor) {
   });
   await addDoc(collection(db, "notifications"), {
     tipo: "nuevo",
-    mensaje: `Nuevo pedido #${numeroPedido} - ${input.clienteNombre}`,
+    mensaje: `Nuevo pedido ${folioVisible} - ${input.clienteNombre}`,
     pedidoId: ref.id,
     leida: false,
     createdAt: serverTimestamp(),
@@ -83,9 +144,9 @@ export async function createOrder(input: CreateOrderInput, actor?: AuditActor) {
     modulo: "pedidos",
     documentId: ref.id,
     afterData: { numeroPedido, clienteNombre: input.clienteNombre, total: input.total, items: input.items },
-    detalle: `Pedido #${numeroPedido} creado - ${input.clienteNombre} (${input.total})`,
+    detalle: `Pedido ${folioVisible} creado - ${input.clienteNombre} (${input.total})`,
   });
-  return { id: ref.id, numeroPedido };
+  return { id: ref.id, numeroPedido, pendienteNumero, folioVisible };
 }
 
 export async function updateOrderStatus(id: string, estado: OrderStatus, actor?: AuditActor) {
