@@ -42,14 +42,8 @@ function Stat({
 }
 
 export default function DashboardPage() {
-  const day = useQuery({
-    queryKey: ["orders", "day"],
-    queryFn: () => listOrdersRange(startOfDay(), endOfDay())
-  });
-  const week = useQuery({
-    queryKey: ["orders", "week"],
-    queryFn: () => listOrdersRange(startOfWeek(), endOfDay())
-  });
+  // Optimización: una sola consulta de rango (mes). Día y semana se derivan
+  // en cliente a partir de los mismos datos, evitando 2 lecturas de rango extra.
   const month = useQuery({
     queryKey: ["orders", "month"],
     queryFn: () => listOrdersRange(startOfMonth(), endOfDay())
@@ -57,6 +51,12 @@ export default function DashboardPage() {
   const latest = useQuery({ queryKey: ["orders", "latest"], queryFn: () => listLatestOrders(8) });
   const inventory = useQuery({ queryKey: ["inventory"], queryFn: () => listInventory() });
   const auditLogs = useQuery({ queryKey: ["audit", "recent"], queryFn: () => listAuditLogs(10) });
+
+  const dayStart = startOfDay().getTime();
+  const weekStart = startOfWeek().getTime();
+  const monthData = month.data || [];
+  const day = { data: monthData.filter((o) => toDate(o.fecha).getTime() >= dayStart) };
+  const week = { data: monthData.filter((o) => toDate(o.fecha).getTime() >= weekStart) };
 
   const validOrders = (arr?: any[]) => (arr || []).filter((o) => o.estado !== "Cancelado");
   const sum = (arr?: any[]) => validOrders(arr).reduce((s, o) => s + (o.total || 0), 0);

@@ -2,33 +2,135 @@
 @tailwind components;
 @tailwind utilities;
 
-:root { color-scheme: dark; }
+/* ============================================================
+   MAELO ROLLS — Sistema de diseño premium
+   Tema oscuro elegante. Compatibilidad total con clases previas
+   (.card / .btn / .input / .table / .badge) — solo se refinan.
+   ============================================================ */
+
+:root {
+  color-scheme: dark;
+  --font-inter: "Inter";
+  --bg: #0a0a0b;
+  --surface: #16161a;
+  --surface-2: #1d1d22;
+  --border: #2c2c33;
+  --border-soft: #232329;
+  --gold: #d4af37;
+  --gold-soft: #e7c860;
+  --red: #b01818;
+  --text: #f5f5f7;
+  --muted: #9a9aa3;
+  --radius: 14px;
+  --shadow-md: 0 4px 20px -4px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 12px 40px -8px rgba(0, 0, 0, 0.6);
+}
+
 html, body { height: 100%; }
+
 body {
-  background: #0A0A0A;
-  color: #FAFAFA;
-  font-family: Inter, system-ui, sans-serif;
+  background:
+    radial-gradient(1200px 600px at 80% -10%, rgba(212, 175, 55, 0.06), transparent 60%),
+    radial-gradient(900px 500px at -10% 110%, rgba(176, 24, 24, 0.06), transparent 55%),
+    var(--bg);
+  background-attachment: fixed;
+  color: var(--text);
+  font-family: var(--font-inter), Inter, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
   /* iOS notch / safe-area */
   padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
   -webkit-text-size-adjust: 100%;
   overscroll-behavior-y: none;
 }
 
-.card { @apply bg-brand-dark border border-brand-gray rounded-xl p-3 sm:p-4; }
-.btn { @apply inline-flex items-center justify-center gap-2 rounded-lg px-3 sm:px-4 py-2 font-medium transition disabled:opacity-50 text-sm; }
-.btn-primary { @apply btn bg-brand-red text-white hover:bg-red-800; }
-.btn-gold { @apply btn bg-brand-gold text-brand-black hover:opacity-90; }
-.btn-ghost { @apply btn border border-brand-gray hover:bg-brand-gray; }
-.input { @apply w-full bg-brand-black border border-brand-gray rounded-lg px-3 py-2 outline-none focus:border-brand-gold text-sm sm:text-base; }
-.label { @apply text-sm text-gray-300 mb-1 block; }
-.table { @apply w-full text-sm; }
-.table th { @apply text-left text-gray-400 py-2 px-2 sm:px-3 border-b border-brand-gray text-xs sm:text-sm whitespace-nowrap; }
-.table td { @apply py-2 px-2 sm:px-3 border-b border-brand-gray text-xs sm:text-sm; }
-.badge { @apply inline-flex px-2 py-1 rounded text-xs font-semibold; }
+/* ── Scrollbar refinada ─────────────────────────────────── */
+* { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+*::-webkit-scrollbar { width: 9px; height: 9px; }
+*::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+*::-webkit-scrollbar-thumb:hover { background: #3a3a42; background-clip: content-box; }
 
-/* Wrapper para tablas responsivas */
+/* ── Superficies ────────────────────────────────────────── */
+.card {
+  background: linear-gradient(180deg, var(--surface) 0%, #131316 100%);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-md);
+  transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease;
+  @apply p-3 sm:p-4;
+}
+.card-hover:hover { border-color: rgba(212,175,55,.35); box-shadow: var(--shadow-lg); transform: translateY(-2px); }
+
+/* ── Botones ────────────────────────────────────────────── */
+.btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-lg px-3 sm:px-4 py-2.5 font-semibold text-sm;
+  transition: background-color .15s ease, opacity .15s ease, transform .08s ease, box-shadow .15s ease;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.btn:active { transform: scale(.97); }
+.btn:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+.btn:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.btn-primary { @apply btn text-white; background: linear-gradient(180deg, #c41f1f, var(--red)); box-shadow: 0 4px 14px -4px rgba(176,24,24,.5); }
+.btn-primary:hover:not(:disabled) { background: linear-gradient(180deg, #d12525, #951414); }
+.btn-gold { @apply btn; color: #1a1402; background: linear-gradient(180deg, var(--gold-soft), var(--gold)); box-shadow: 0 4px 14px -4px rgba(212,175,55,.45); }
+.btn-gold:hover:not(:disabled) { filter: brightness(1.05); }
+.btn-ghost { @apply btn; border: 1px solid var(--border); color: var(--text); background: transparent; }
+.btn-ghost:hover:not(:disabled) { background: var(--surface-2); border-color: #3a3a42; }
+
+/* ── Formularios ────────────────────────────────────────── */
+.input {
+  @apply w-full rounded-lg px-3 py-2.5 text-sm sm:text-base;
+  background: #101013;
+  border: 1px solid var(--border);
+  color: var(--text);
+  outline: none;
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+.input::placeholder { color: #6b6b73; }
+.input:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(212,175,55,.15); }
+.label { @apply text-sm mb-1 block; color: var(--muted); }
+
+/* ── Tablas ─────────────────────────────────────────────── */
+.table { @apply w-full text-sm; border-collapse: collapse; }
+.table th { @apply text-left py-2.5 px-2 sm:px-3 text-xs sm:text-sm whitespace-nowrap; color: var(--muted); border-bottom: 1px solid var(--border); font-weight: 600; }
+.table td { @apply py-2.5 px-2 sm:px-3 text-xs sm:text-sm; border-bottom: 1px solid var(--border-soft); }
+.table tbody tr { transition: background-color .12s ease; }
+.table tbody tr:hover { background: rgba(255,255,255,.02); }
 .table-responsive { @apply overflow-x-auto -mx-3 sm:-mx-4 px-3 sm:px-4; }
 
+/* ── Badges semánticos ──────────────────────────────────── */
+.badge { @apply inline-flex items-center px-2 py-1 rounded-md text-xs font-semibold; border: 1px solid transparent; }
+.badge-ok { background: rgba(34,197,94,.12); color: #4ade80; border-color: rgba(34,197,94,.25); }
+.badge-warn { background: rgba(234,179,8,.12); color: #facc15; border-color: rgba(234,179,8,.25); }
+.badge-danger { background: rgba(239,68,68,.12); color: #f87171; border-color: rgba(239,68,68,.25); }
+.badge-gold { background: rgba(212,175,55,.14); color: var(--gold-soft); border-color: rgba(212,175,55,.3); }
+
+/* ── Animaciones de entrada ─────────────────────────────── */
+@keyframes fade-up { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.animate-fade-up { animation: fade-up .35s ease both; }
+@keyframes shimmer { 100% { transform: translateX(100%); } }
+.skeleton {
+  position: relative; overflow: hidden;
+  background: var(--surface-2); border-radius: 8px;
+}
+.skeleton::after {
+  content: ""; position: absolute; inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.06), transparent);
+  animation: shimmer 1.4s infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
+
+/* ── Impresión ──────────────────────────────────────────── */
 @media print {
   .no-print { display: none !important; }
   body { background: white !important; color: black !important; }

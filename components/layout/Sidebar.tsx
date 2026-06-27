@@ -89,8 +89,10 @@ export function Sidebar() {
             <Link
               key={n.href}
               href={n.href}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm ${
-                active ? "bg-brand-red text-white" : "text-gray-300 hover:bg-brand-gray"
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
+                active
+                  ? "bg-brand-red/90 text-white font-medium shadow-[inset_3px_0_0_0_#D4AF37]"
+                  : "text-gray-300 hover:bg-brand-gray hover:text-white"
               }`}
             >
               <Icon size={18} />

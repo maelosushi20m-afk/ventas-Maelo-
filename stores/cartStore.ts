@@ -12,9 +12,11 @@ interface CartState {
   set: (patch: Partial<CartState>) => void;
   addItem: (it: OrderItem) => void;
   changeQty: (index: number, delta: number) => void;
+  setQty: (index: number, cantidad: number) => void;
   removeItem: (index: number) => void;
   clear: () => void;
   total: () => number;
+  count: () => number;
 }
 
 const initial = {
@@ -47,9 +49,17 @@ export const useCart = create<CartState>()(
         c[i] = { ...c[i], cantidad: nuevo, subtotal: nuevo * c[i].precio };
         return { items: c };
       }),
+      setQty: (i, cantidad) => set((s) => {
+        const c = [...s.items];
+        if (!c[i]) return {};
+        if (cantidad <= 0) return { items: c.filter((_, idx) => idx !== i) };
+        c[i] = { ...c[i], cantidad, subtotal: cantidad * c[i].precio };
+        return { items: c };
+      }),
       removeItem: (i) => set((s) => ({ items: s.items.filter((_, idx) => idx !== i) })),
       clear: () => set(initial),
-      total: () => get().items.reduce((s, x) => s + x.subtotal, 0)
+      total: () => get().items.reduce((s, x) => s + x.subtotal, 0),
+      count: () => get().items.reduce((s, x) => s + x.cantidad, 0)
     }),
     { name: "maelo-cart" }
   )
